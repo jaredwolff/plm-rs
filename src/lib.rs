@@ -20,14 +20,24 @@ pub fn establish_connection() -> SqliteConnection {
         .unwrap_or_else(|_| panic!("Error connecting to {}", database_url))
 }
 
-pub fn create_part(conn: &SqliteConnection, pn: &str, mpn: &str, descr: &str, ver: &i32) -> usize {
+pub fn create_part(conn: &SqliteConnection, pn: &str, mpn: &str, descr: &str, ver: &i32) -> std::result::Result<usize, diesel::result::Error> {
     use schema::parts;
 
     let new_part = NewPart { pn, mpn, descr, ver };
 
-    // TODO: match the error for create_part
     diesel::insert_into(parts::table)
         .values(&new_part)
         .execute(conn)
-        .expect("Error saving new part")
+}
+
+pub fn update_part(conn: &SqliteConnection, _pn: &str, _mpn: &str, _descr: &str, _ver: &i32) -> std::result::Result<usize, diesel::result::Error> {
+    use schema::parts::dsl::*;
+
+    // TODO: match the error for create_part
+    diesel::update(parts.filter(pn.eq(_pn)))
+    .set((mpn.eq(_mpn),
+        descr.eq(_descr),
+        ver.eq(_ver)))
+    .execute(conn)
+
 }

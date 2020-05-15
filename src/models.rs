@@ -2,7 +2,7 @@ use super::schema::parts;
 
 use chrono::NaiveDateTime;
 
-#[derive(Queryable)]
+#[derive(Identifiable,Queryable)]
 pub struct Part {
     pub id: i32,
     pub pn: String,
