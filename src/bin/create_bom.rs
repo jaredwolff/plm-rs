@@ -298,10 +298,30 @@ fn main() {
       }
     }
 
-    // TODO: get the part ID
+    // Get the part ID
+    let line_item = find_parts_by_pn(&conn, &part.pn).expect("Unable to find_parts_by_pn");
+    let bom_item = find_parts_by_pn(&conn, &bom_pn).expect("Unable to find_parts_by_pn");
 
-    // TODO: create BOM association between the part and the
+    // Create BOM association between the part and the
     // BOM info like QTY, REFDES, NOSTUFF
+
+    if line_item.len() > 0 && bom_item.len() > 0 {
+      let line_item = &line_item[0];
+      let bom_item = &bom_item[0];
+
+      // Create the new relationship
+      // ? Better way to do this?
+      let relationship = models::NewPartsParts {
+        quantity: &item.quantity,
+        bom_ver: &bom_item.ver,
+        refdes: &item.name,
+        bom_part_id: &bom_item.id,
+        part_id: &line_item.id,
+      };
+
+      // Push them to the DB
+      create_bom_line_item(&conn, &relationship).expect("Unable to add new BOM line item.");
+    }
   }
 
   table.printstd();
