@@ -2,7 +2,13 @@ table! {
     builds (id) {
         id -> Integer,
         created_at -> Timestamp,
-        part_id -> Nullable<Integer>,
+        estimated_completion -> Timestamp,
+        quantity -> Integer,
+        cost -> Nullable<Float>,
+        complete -> Integer,
+        notes -> Nullable<Text>,
+        part_ver -> Integer,
+        part_id -> Integer,
     }
 }
 
@@ -12,7 +18,7 @@ table! {
         quantity -> Integer,
         unit_price -> Float,
         created_at -> Timestamp,
-        part_id -> Nullable<Integer>,
+        part_id -> Integer,
     }
 }
 
@@ -33,8 +39,10 @@ table! {
     parts_parts (id) {
         id -> Integer,
         quantity -> Integer,
-        bom_part_id -> Nullable<Integer>,
-        part_id -> Nullable<Integer>,
+        bom_ver -> Integer,
+        refdes -> Text,
+        bom_part_id -> Integer,
+        part_id -> Integer,
     }
 }
 

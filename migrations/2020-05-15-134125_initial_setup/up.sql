@@ -16,7 +16,7 @@ CREATE TABLE inventories (
   quantity INTEGER NOT NULL, -- how much there are
   unit_price REAL NOT NULL, -- the unit price
   created_at TIMESTAMP  NOT NULL DEFAULT (datetime('now','localtime')),
-  part_id INTEGER, -- the part that is associated with the inventory
+  part_id INTEGER NOT NULL, -- the part that is associated with the inventory
   FOREIGN KEY(part_id) REFERENCES parts(id) --only one part associated with this inventory (many to one)
 );
 
@@ -24,7 +24,13 @@ CREATE TABLE inventories (
 CREATE TABLE builds (
   id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT (datetime('now','localtime')),
-  part_id INTEGER, -- the part/BOM we're building
+  estimated_completion TIMESTAMP NOT NULL DEFAULT (datetime('now','localtime')),
+  quantity INTEGER NOT NULL, -- how much there are
+  cost REAL, -- cost per unit
+  complete INTEGER NOT NULL, -- how much there are
+  notes TEXT, -- text for build details
+  part_ver INTEGER NOT NULL, -- version of the BOM we're using
+  part_id INTEGER NOT NULL, -- the part/BOM we're building
   FOREIGN KEY(part_id) REFERENCES parts(id)
 );
 
@@ -32,8 +38,10 @@ CREATE TABLE builds (
 CREATE TABLE parts_parts ( -- i.e. boms
   id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
   quantity INTEGER NOT NULL, -- quantity that is used in this BOM
-  bom_part_id INTEGER, -- this is simply a part that has a BOM associated with it
-  part_id INTEGER, -- this table has entries that are associated with individual parts.
-  FOREIGN KEY(bom_part_id) REFERENCES parts(id),
-  FOREIGN KEY(part_id) REFERENCES parts(id)
+  bom_ver INTEGER NOT NULL, -- version of the bom that this is tied to
+  refdes VARCHAR NOT NULL, -- tracking the refdes
+  bom_part_id INTEGER NOT NULL, -- this is simply a part that has a BOM associated with it
+  part_id INTEGER NOT NULL, -- this table has entries that are associated with individual parts.
+  FOREIGN KEY(bom_part_id) REFERENCES parts(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY(part_id) REFERENCES parts(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
