@@ -17,7 +17,6 @@ fn main() {
 
     let connection = establish_connection();
     let results = parts
-        .limit(5)
         .load::<Part>(&connection)
         .expect("Error loading parts");
 
