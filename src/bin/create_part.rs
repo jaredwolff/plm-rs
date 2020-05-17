@@ -2,6 +2,7 @@ extern crate mrp;
 extern crate diesel;
 
 use self::mrp::*;
+use self::models::*;
 use std::io::{stdin,stdout,Write};
 
 fn main() {
@@ -32,7 +33,14 @@ fn main() {
   let ver:i32 = ver.trim().parse().expect("Invalid version number!");
 
   // Create the part
-  let res = create_part(&connection, &pn, &mpn, &desc, &ver);
+  let part = NewUpdatePart {
+    pn: pn,
+    mpn: mpn,
+    descr: desc,
+    ver: &ver
+  };
+
+  let res = create_part(&connection, &part);
 
   // Check for success
   let found = match res {
@@ -53,7 +61,7 @@ fn main() {
     // Update if they said yes.
     if ch == 'y' {
 
-      let res = update_part(&connection, &pn, &mpn, &desc, &ver);
+      let res = update_part(&connection, &part);
 
       // Check for success
       match res {

@@ -1,12 +1,13 @@
 -- Your SQL goes here
 CREATE TABLE parts (
   id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-  pn VARCHAR NOT NULL, -- part number
-  mpn VARCHAR NOT NULL, -- manufacturer part number
+  pn VARCHAR UNIQUE NOT NULL, -- part number
+  mpn VARCHAR UNIQUE NOT NULL, -- manufacturer part number
+  digikeypn VARCHAR UNIQUE, -- digikey part number
   descr VARCHAR NOT NULL, -- description
   ver INTEGER NOT NULL, -- version of part
-  created_at TIMESTAMP NOT NULL DEFAULT (datetime('now','localtime')),
-  UNIQUE(pn,mpn) -- asserts uniqueness of this part
+  val VARCHAR, -- stores the part value (if any)
+  created_at TIMESTAMP NOT NULL DEFAULT (datetime('now','localtime'))
 );
 
 -- Used to keep a ledger of all part inventory changes.

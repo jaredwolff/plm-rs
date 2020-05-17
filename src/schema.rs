@@ -21,8 +21,10 @@ table! {
         id -> Integer,
         pn -> Text,
         mpn -> Text,
+        digikeypn -> Nullable<Text>,
         descr -> Text,
         ver -> Integer,
+        val -> Nullable<Text>,
         created_at -> Timestamp,
     }
 }

@@ -3,6 +3,16 @@
 `diesel migration run` to get to the latest
 `diesel migration rever` to roll back
 
+## Roadmap
+
+* [x] Tests
+* [x] Import a BOM from a .sch file
+* [x] Adds/updates parts to DB from BOM import.
+* [ ] Create BOM relationships
+* [ ] Create a build based on a BOM
+* [ ] Check shortages based on inventory
+* [ ] Add inventory from CSV order
+
 ## Running a command
 
 *Create a part manually*
