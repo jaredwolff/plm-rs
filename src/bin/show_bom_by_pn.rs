@@ -24,15 +24,15 @@ fn main() {
     .expect("Need a version number as an argument.");
   let version = version.parse::<i32>().unwrap();
 
-  let parts = find_parts_by_pn(&connection, &part_number).expect("Unable to run query.");
+  let part = find_part_by_pn(&connection, &part_number);
 
-  if parts.len() == 0 {
+  if part.is_err() {
     println!("{} version {} was not found!", part_number, version);
     std::process::exit(1);
   }
 
   // Transform the response into a Part
-  let part = &parts[0];
+  let part = part.unwrap();
 
   if part.ver != version {
     println!(
@@ -68,12 +68,11 @@ fn main() {
     "Inventory Qty"
   ]);
   for entry in results {
-    let details =
-      find_part_by_id(&connection, &entry.part_id.unwrap()).expect("Unable to get details!");
+    let details = find_part_by_id(&connection, &entry.part_id).expect("Unable to get details!");
 
     // Get inventory info
     let inventory = inventories::dsl::inventories
-      .filter(inventories::dsl::part_id.eq(entry.part_id.unwrap()))
+      .filter(inventories::dsl::part_id.eq(entry.part_id))
       .load::<Inventory>(&connection)
       .expect("Error loading parts");
 

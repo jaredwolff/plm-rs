@@ -19,15 +19,15 @@ fn main() {
   let quantity = args().nth(3).expect("Need a quantity as an argument.");
   let quantity = quantity.parse::<i32>().unwrap();
 
-  let parts = find_parts_by_pn(&connection, &part_number).expect("Unable to run query.");
+  let part = find_part_by_pn(&connection, &part_number);
 
-  if parts.len() == 0 {
+  if part.is_err() {
     println!("{} version {} was not found!", part_number, version);
     std::process::exit(1);
   }
 
   // Transform the response into a Part
-  let part = &parts[0];
+  let part = part.unwrap();
 
   if part.ver != version {
     println!(

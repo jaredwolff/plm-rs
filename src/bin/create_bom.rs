@@ -16,13 +16,15 @@ use std::env;
 use std::env::args;
 
 use std::fs::File;
-use std::io::BufReader;
+use std::io::{self, BufReader};
 
 // Local includes
 #[path = "../prompt.rs"]
 mod prompt;
 #[path = "../schematic.rs"]
 mod schematic;
+
+use prompt::Prompt;
 
 #[derive(Eq, PartialEq)]
 struct LineItem {
@@ -34,6 +36,16 @@ struct LineItem {
 
 fn main() {
   use mrp::schema::parts::dsl::*;
+
+  // For prompts
+  let stdio = io::stdin();
+  let input = stdio.lock();
+  let output = io::stdout();
+
+  let mut prompt = Prompt {
+    reader: input,
+    writer: output,
+  };
 
   // Establish connection!
   let conn = establish_connection();
@@ -82,20 +94,20 @@ fn main() {
   }
 
   // Serach for it and make sure that it matches
-  let res = find_parts_by_pn(&conn, &bom_pn).expect("Unable to run query.");
+  let res = find_part_by_pn(&conn, &bom_pn);
 
-  if res.len() > 0 {
+  if res.is_ok() {
     // Unwrap from Option
-    let bom = &res[0];
+    let bom = res.unwrap();
 
     let question = format!("BOM {} found! Would you like to update it?", bom_pn);
-    let yes = prompt::ask_yes_no_question(&question);
+    let yes = prompt.ask_yes_no_question(&question);
 
     // If it already exists error/ask to update. Then runs the update routine instead
     if yes {
       // Ask if a new revision is requred
       let question = format!("BOM {} found! Would you like to up-rev the design?", bom_pn);
-      let yes = prompt::ask_yes_no_question(&question);
+      let yes = prompt.ask_yes_no_question(&question);
 
       if yes {
         // Increment the version
@@ -278,19 +290,19 @@ fn main() {
     table.add_row(row![part.pn, part.mpn, part.descr, part.ver]);
 
     // Find part
-    let existing = find_parts_by_pn(&conn, &part.pn).expect("Unable to find_parts_by_pn");
+    let existing = find_part_by_pn(&conn, &part.pn);
 
     // Not found, create
-    if existing.len() == 0 {
+    if existing.is_err() {
       create_part(&conn, &part).expect("Unable to create part!");
     } else {
       // Found, check for changes.
-      let first = &existing[0];
+      let first = existing.unwrap();
 
       // Check for changes and ask if want to update.
       if part.mpn != first.mpn || part.descr != first.descr || *part.ver != first.ver {
         let question = format!("{} found! Would you like to update it?", first.pn);
-        let yes = prompt::ask_yes_no_question(&question);
+        let yes = prompt.ask_yes_no_question(&question);
 
         if yes {
           update_part(&conn, &part).expect("Error updating part!");
@@ -299,15 +311,15 @@ fn main() {
     }
 
     // Get the part ID
-    let line_item = find_parts_by_pn(&conn, &part.pn).expect("Unable to find_parts_by_pn");
-    let bom_item = find_parts_by_pn(&conn, &bom_pn).expect("Unable to find_parts_by_pn");
+    let line_item = find_part_by_pn(&conn, &part.pn);
+    let bom_item = find_part_by_pn(&conn, &bom_pn);
 
     // Create BOM association between the part and the
     // BOM info like QTY, REFDES, NOSTUFF
 
-    if line_item.len() > 0 && bom_item.len() > 0 {
-      let line_item = &line_item[0];
-      let bom_item = &bom_item[0];
+    if line_item.is_ok() && bom_item.is_ok() {
+      let line_item = line_item.unwrap();
+      let bom_item = bom_item.unwrap();
 
       // Create the new relationship
       // ? Better way to do this?

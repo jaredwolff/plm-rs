@@ -8,6 +8,7 @@ edition = "2018"
 
 [dependencies]
 diesel = { version = "^1.4.4", features = ["sqlite", "chrono"] }
+diesel_migrations = { version = "^1.4.0" }
 dotenv = "0.9.0"
 chrono = "0.4.11"
 prettytable-rs = "^0.8"

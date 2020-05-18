@@ -2,15 +2,20 @@
 extern crate diesel;
 extern crate dotenv;
 
+#[macro_use]
+extern crate diesel_migrations;
+
 pub mod models;
 pub mod schema;
 
 use diesel::prelude::*;
-use diesel::sql_query;
 use dotenv::dotenv;
 use std::env;
 
 use self::models::*;
+
+// Migrate
+embed_migrations!();
 
 pub fn establish_connection() -> SqliteConnection {
   dotenv().ok();
@@ -43,28 +48,26 @@ pub fn update_part(
     .execute(conn)
 }
 
-pub fn find_parts_by_pn(
+pub fn find_part_by_pn(
   conn: &SqliteConnection,
   pn: &str,
-) -> std::result::Result<Vec<Part>, diesel::result::Error> {
+) -> std::result::Result<Part, diesel::result::Error> {
   use schema::parts;
 
-  parts::dsl::parts
-    .filter(parts::dsl::pn.eq(pn))
-    .load::<Part>(conn)
+  parts::dsl::parts.filter(parts::dsl::pn.eq(pn)).first(conn)
 }
 
-pub fn find_parts_by_pn_and_ver(
+pub fn find_part_by_pn_and_ver(
   conn: &SqliteConnection,
   pn: &str,
   ver: &i32,
-) -> std::result::Result<Vec<Part>, diesel::result::Error> {
+) -> std::result::Result<Part, diesel::result::Error> {
   use schema::parts;
 
   parts::dsl::parts
     .filter(parts::dsl::pn.eq(pn))
     .filter(parts::dsl::ver.eq(ver))
-    .load::<Part>(conn)
+    .first(conn)
 }
 
 pub fn find_part_by_id(
@@ -106,8 +109,7 @@ pub fn find_builds_by_pn(
 ) -> std::result::Result<Vec<Build>, diesel::result::Error> {
   use schema::builds;
 
-  let parts = find_parts_by_pn(&conn, &pn).expect("Unable to run parts query.");
-  let part = &parts[0];
+  let part = find_part_by_pn(&conn, &pn).expect("Unable to run parts query.");
 
   builds::dsl::builds
     .filter(builds::dsl::part_id.eq(part.id))
@@ -132,144 +134,147 @@ pub fn test_connection() -> SqliteConnection {
   // Start a connection from memory
   let conn = SqliteConnection::establish(":memory:").expect("Unable to establish db in memory!");
 
-  // TODO: figure out how to use the embedded bits to use the actual schema
-  // Setup memory DB
-  sql_query(
-    "CREATE TABLE parts (\
-        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
-        pn VARCHAR UNIQUE NOT NULL, \
-        mpn VARCHAR UNIQUE NOT NULL , \
-        descr VARCHAR NOT NULL, \
-        ver INTEGER NOT NULL, \
-        created_at TIMESTAMP NOT NULL DEFAULT (datetime('now','localtime')))",
-  )
-  .execute(&conn)
-  .expect("Unable to create table!");
+  // This will run the necessary migrations.
+  embedded_migrations::run(&conn).expect("Unable to run test migration.");
 
   // Return the active connection
   conn
 }
 
-#[test]
-fn create_part_check_if_created() {
-  use self::models::Part;
-  use schema::parts::dsl::*;
+/* START: Part Related Tests */
+mod part_tests {
 
-  let conn = test_connection();
+  #[test]
+  fn create_part_check_if_created() {
+    use super::*;
+    use models::Part;
+    use schema::parts::dsl::*;
 
-  // Create NewUpdatePart instance
-  let part = NewUpdatePart {
-    pn: "CAP-0.1U-10V-0402",
-    mpn: "ABCD",
-    descr: "CAP 0.1U 10V 0402",
-    ver: &1,
-  };
+    let conn = test_connection();
 
-  // Create the part
-  create_part(&conn, &part).expect("Error creating part!");
+    // Create NewUpdatePart instance
+    let part = NewUpdatePart {
+      pn: "CAP-0.1U-10V-0402",
+      mpn: "ABCD",
+      descr: "CAP 0.1U 10V 0402",
+      ver: &1,
+    };
 
-  // Serach for it and make sure that it matches
-  let found: Part = parts.find(1).first(&conn).unwrap();
+    // Create the part
+    create_part(&conn, &part).expect("Error creating part!");
 
-  // Make sure these guys are equal
-  assert_eq!(part.pn, found.pn);
-  assert_eq!(part.mpn, found.mpn);
-  assert_eq!(part.descr, found.descr);
-  assert_eq!(*part.ver, found.ver);
+    // Serach for it and make sure that it matches
+    let found: Part = parts.find(1).first(&conn).unwrap();
+
+    // Make sure these guys are equal
+    assert_eq!(part.pn, found.pn);
+    assert_eq!(part.mpn, found.mpn);
+    assert_eq!(part.descr, found.descr);
+    assert_eq!(*part.ver, found.ver);
+  }
+
+  #[test]
+  #[should_panic]
+  // This is testing the schema more than anything
+  // Only one part with the same PN!
+  fn create_duplicate_pn_should_panic() {
+    use super::*;
+    let conn = test_connection();
+
+    // Create NewUpdatePart instance
+    let part = NewUpdatePart {
+      pn: "CAP-0.1U-10V-0402",
+      mpn: "ABCD",
+      descr: "CAP 0.1U 10V 0402",
+      ver: &1,
+    };
+
+    // Create the part
+    create_part(&conn, &part).expect("Error creating part!");
+
+    // Create NewUpdatePart instance
+    let part = NewUpdatePart {
+      pn: "CAP-0.1U-10V-0402",
+      mpn: "ABCD-ND",
+      descr: "CAP 0.1U 10V 0402",
+      ver: &1,
+    };
+
+    // Do it again
+    create_part(&conn, &part).expect("Error creating part!");
+  }
+
+  #[test]
+  #[should_panic]
+  // This is testing the schema more than anything
+  // Only one part with the same MPN!
+  fn create_duplicate_mpn_should_panic() {
+    use super::*;
+    let conn = test_connection();
+
+    // Create NewUpdatePart instance
+    let part = NewUpdatePart {
+      pn: "CAP-0.1U-10V-0402",
+      mpn: "ABCD",
+      descr: "CAP 0.1U 10V 0402",
+      ver: &1,
+    };
+
+    // Create the part
+    create_part(&conn, &part).expect("Error creating part!");
+
+    // Create NewUpdatePart instance
+    let part = NewUpdatePart {
+      pn: "CAP-0.1U-10V-0402-01",
+      mpn: "ABCD",
+      descr: "CAP 0.1U 10V 0402",
+      ver: &1,
+    };
+
+    // Do it again
+    create_part(&conn, &part).expect("Error creating part!");
+  }
+
+  #[test]
+  fn create_and_update_part() {
+    use super::*;
+    use models::Part;
+    use schema::parts::dsl::*;
+
+    let conn = test_connection();
+
+    // Create NewUpdatePart instance
+    let part = NewUpdatePart {
+      pn: "CAP-0.1U-10V-0402",
+      mpn: "ABCD",
+      descr: "CAP 0.1U 10V 0402",
+      ver: &1,
+    };
+
+    // Create the part
+    create_part(&conn, &part).expect("Error creating part!");
+
+    // Update the value
+    let part = NewUpdatePart {
+      pn: "CAP-0.1U-10V-0402",
+      mpn: "ABCD",
+      descr: "CAP 0.1 10V 0402 GOOD", // Only changing this guy
+      ver: &1,
+    };
+
+    // Update the part
+    update_part(&conn, &part).expect("Error creating part!");
+
+    // Serach for it and make sure that it matches
+    let found: Part = parts.find(1).first(&conn).unwrap();
+
+    // Make sure these guys are equal
+    assert_eq!(part.descr, found.descr);
+  }
 }
 
-#[test]
-#[should_panic]
-// This is testing the schema more than anything
-// Only one part with the same PN!
-fn create_duplicate_pn_should_panic() {
-  let conn = test_connection();
+/* START: Inventory Related Tests */
+mod inventory_tests {}
 
-  // Create NewUpdatePart instance
-  let part = NewUpdatePart {
-    pn: "CAP-0.1U-10V-0402",
-    mpn: "ABCD",
-    descr: "CAP 0.1U 10V 0402",
-    ver: &1,
-  };
-
-  // Create the part
-  create_part(&conn, &part).expect("Error creating part!");
-
-  // Create NewUpdatePart instance
-  let part = NewUpdatePart {
-    pn: "CAP-0.1U-10V-0402",
-    mpn: "ABCD-ND",
-    descr: "CAP 0.1U 10V 0402",
-    ver: &1,
-  };
-
-  // Do it again
-  create_part(&conn, &part).expect("Error creating part!");
-}
-
-#[test]
-#[should_panic]
-// This is testing the schema more than anything
-// Only one part with the same MPN!
-fn create_duplicate_mpn_should_panic() {
-  let conn = test_connection();
-
-  // Create NewUpdatePart instance
-  let part = NewUpdatePart {
-    pn: "CAP-0.1U-10V-0402",
-    mpn: "ABCD",
-    descr: "CAP 0.1U 10V 0402",
-    ver: &1,
-  };
-
-  // Create the part
-  create_part(&conn, &part).expect("Error creating part!");
-
-  // Create NewUpdatePart instance
-  let part = NewUpdatePart {
-    pn: "CAP-0.1U-10V-0402-01",
-    mpn: "ABCD",
-    descr: "CAP 0.1U 10V 0402",
-    ver: &1,
-  };
-
-  // Do it again
-  create_part(&conn, &part).expect("Error creating part!");
-}
-
-#[test]
-fn create_and_update_part() {
-  use self::models::Part;
-  use schema::parts::dsl::*;
-
-  let conn = test_connection();
-
-  // Create NewUpdatePart instance
-  let part = NewUpdatePart {
-    pn: "CAP-0.1U-10V-0402",
-    mpn: "ABCD",
-    descr: "CAP 0.1U 10V 0402",
-    ver: &1,
-  };
-
-  // Create the part
-  create_part(&conn, &part).expect("Error creating part!");
-
-  // Update the value
-  let part = NewUpdatePart {
-    pn: "CAP-0.1U-10V-0402",
-    mpn: "ABCD",
-    descr: "CAP 0.1 10V 0402 GOOD", // Only changing this guy
-    ver: &1,
-  };
-
-  // Update the part
-  update_part(&conn, &part).expect("Error creating part!");
-
-  // Serach for it and make sure that it matches
-  let found: Part = parts.find(1).first(&conn).unwrap();
-
-  // Make sure these guys are equal
-  assert_eq!(part.descr, found.descr);
-}
+/* START: Build Related Tests */
+mod build_tests {}
