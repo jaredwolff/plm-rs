@@ -6,6 +6,50 @@ capture your bill of materials. Use it to track inventories. Use it to create bu
 consume inventory accordingly! It's not meant to replace PLM (Product Lifecycle Management) systems
 like [Aligni](https://www.aligni.com) but rather supplement product makers who may not be able to pay for it.
 
+## Functionality
+
+### Create/Delete Parts
+
+Using `mrp parts create` and `mrp parts delete` you can easily add and remove parts.
+
+![Create and delete](images/create-delete.png)
+
+### Add a Bill of Materials from an Eagle .sch
+
+Creating parts manually is a pain though. Why not add them using an EagleCAD schematic!
+
+`mrp bom import -f ~/Documents/eagle/projects/pm25/pm25.sch`
+
+![Create bom](images/create-bom.png)
+
+### Create a Build
+
+You can then create a new "build" based on a BOM. In my case my BOM part number is `PS-AQW`:
+
+![Create build](images/create-build-and-show.png)
+
+### Check shortages
+
+You can also check shortages using `mrp inventory show -s` Without the `-s` argument, this command will show all your inventory.
+
+![Shortages](images/shortages.png)
+
+### Add Inventory from CSV
+
+If you have inventory, you can track it here! You can add inventory one by one or use a .csv file to do the work. This is great for importing Digikey purchases, etc.
+
+![Import Inventory](images/add-inventory.png)
+
+### Complete a Build
+
+Finally you can check your shortages and then complete your build. Use `mrp builds complete -b <your build  id>` to finish up. This command will double check your inventory is up to snuff before completing your build though!
+
+![Complete Build Not Ready](images/complete-still-short.png)
+
+## This Utility Is Alpha
+
+And it never may make it out of Alpha. Use at your own risk.
+
 ## Building
 
 To build run `cargo build --release`. The release will be placed in `target/release`. As of this writing
@@ -60,3 +104,7 @@ cargo run --bin mrp inventory show
 cargo run --bin mrp builds show -a
 cargo run --bin mrp builds complete -b 1
 ```
+
+## License
+
+BSD-3 Licensed 🎉
