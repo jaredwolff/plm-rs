@@ -1,9 +1,10 @@
-# An Eagle Powered PLM + MRP for your command line!
+# An Eagle Powered Bom Management for your command line!
+![screenshot](images/screenshot.png)
 
 This project utilizes the built-in capabilities of Eagle to store part data. Use this project to
 capture your bill of materials. Use it to track inventories. Use it to create builds and
-consume inventory accordingly! It's not meant to replace PLM systems like Aligni but rather
-supplement product makers who may not be able to pay for it.
+consume inventory accordingly! It's not meant to replace PLM (Product Lifecycle Management) systems
+like [Aligni](https://www.aligni.com) but rather supplement product makers who may not be able to pay for it.
 
 ## Building
 
