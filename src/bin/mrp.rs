@@ -33,6 +33,7 @@ struct Bom {
 #[clap(version = crate_version!())]
 enum BomSubCommand {
   Import(ImportBom),
+  Show(ShowBom),
 }
 
 /// A subcommand for importing a bom from an Eagle .sch file
@@ -40,6 +41,17 @@ enum BomSubCommand {
 struct ImportBom {
   #[clap(short, long)]
   filename: String,
+}
+
+/// A subcommand for showing a bom from pn
+#[derive(Clap)]
+struct ShowBom {
+  /// Part number of the Bom in question
+  #[clap(short, long)]
+  part_number: String,
+  /// Version of the part in question
+  #[clap(short, long)]
+  version: i32,
 }
 
 /// A subcommand for adding/modifying/removing parts
@@ -163,6 +175,9 @@ fn main() {
     SubCommand::Bom(s) => match s.subcmd {
       BomSubCommand::Import(a) => {
         bom::import(&a.filename);
+      }
+      BomSubCommand::Show(a) => {
+        bom::show(&a.part_number, &a.version);
       }
     },
   }
