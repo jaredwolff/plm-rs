@@ -74,6 +74,14 @@ fn main() {
         let part =
           find_part_by_id(&connection, &bom_list_entry.part_id).expect("Unable to get part by id.");
 
+        // Calculate the amount short
+        let mut short = quantity - (build.quantity * bom_list_entry.quantity);
+
+        // To 0 if not short
+        if short > 0 {
+          short = 0;
+        }
+
         // Create shortage item
         let shortage = Shortage {
           pid: bom_list_entry.part_id,
@@ -81,7 +89,7 @@ fn main() {
           desc: part.descr,
           have: quantity,
           needed: build.quantity * bom_list_entry.quantity,
-          short: quantity - (build.quantity * bom_list_entry.quantity),
+          short: short,
         };
 
         // Add to shortage list

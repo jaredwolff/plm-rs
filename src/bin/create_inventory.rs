@@ -58,8 +58,9 @@ fn main() {
     // Commits change
     let entry = NewInventoryEntry {
       part_id: &part.id,
+      unit_price: Some(&0.0),
       quantity: &adj,
-      notes: &notes,
+      notes: Some(&notes),
     };
 
     create_inventory(&conn, &entry).expect("Unable to create inventory item.");

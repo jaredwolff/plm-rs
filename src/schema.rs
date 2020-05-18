@@ -16,7 +16,8 @@ table! {
     inventories (id) {
         id -> Integer,
         quantity -> Integer,
-        unit_price -> Float,
+        unit_price -> Nullable<Float>,
+        notes -> Nullable<Text>,
         created_at -> Timestamp,
         part_id -> Integer,
     }

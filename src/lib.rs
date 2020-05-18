@@ -118,6 +118,17 @@ pub fn find_builds_by_pn(
 
 // Inventory related
 
+pub fn create_inventory(
+  conn: &SqliteConnection,
+  entry: &NewInventoryEntry,
+) -> std::result::Result<usize, diesel::result::Error> {
+  use schema::inventories;
+
+  diesel::insert_into(inventories::table)
+    .values(entry)
+    .execute(conn)
+}
+
 pub fn find_inventories_by_part_id(
   conn: &SqliteConnection,
   id: &i32,

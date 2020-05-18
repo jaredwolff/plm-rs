@@ -14,7 +14,8 @@ CREATE TABLE parts (
 CREATE TABLE inventories (
   id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
   quantity INTEGER NOT NULL, -- how much there are
-  unit_price REAL NOT NULL, -- the unit price
+  unit_price REAL, -- the unit price
+  notes TEXT, -- notes
   created_at TIMESTAMP  NOT NULL DEFAULT (datetime('now','localtime')),
   part_id INTEGER NOT NULL, -- the part that is associated with the inventory
   FOREIGN KEY(part_id) REFERENCES parts(id) --only one part associated with this inventory (many to one)

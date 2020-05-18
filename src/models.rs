@@ -48,7 +48,8 @@ pub struct NewPartsParts<'a> {
 pub struct Inventory {
     pub id: i32,
     pub quantity: i32,
-    pub unit_price: f32,
+    pub unit_price: Option<f32>,
+    pub notes: Option<String>,
     pub created_at: NaiveDateTime,
     pub part_id: i32,
 }
@@ -57,8 +58,9 @@ pub struct Inventory {
 #[table_name = "inventories"]
 pub struct NewInventoryEntry<'a> {
     pub quantity: &'a i32,
-    pub unit_price: &'a f32,
+    pub unit_price: Option<&'a f32>,
     pub part_id: &'a i32,
+    pub notes: Option<&'a str>,
 }
 
 #[derive(Identifiable, Queryable)]
