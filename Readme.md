@@ -33,12 +33,12 @@
 ## Steps for testing
 
 ```
-cargo run --bin create_bom /Users/jaredwolff/Documents/eagle/projects/pm25/pm25.sch
-cargo run --bin create_build PS-AQW 1 2
-cargo run --bin show_inventory_shortage
-cargo run --bin create_inventory_from_csv test/inventory.csv
-cargo run --bin show_inventory_shortage
-cargo run --bin show_inventory
-cargo run --bin show_builds
-cargo run --bin complete_build 1
+cargo run --bin mrp bom import -f /Users/jaredwolff/Documents/eagle/projects/pm25/pm25.sch
+cargo run --bin mrp builds create
+cargo run --bin mrp inventory show -s
+cargo run --bin mrp inventory create -f test/inventory.csv
+cargo run --bin mrp inventory show -s
+cargo run --bin mrp inventory show
+cargo run --bin mrp builds show -a
+cargo run --bin mrp builds complete -b 1
 ```
