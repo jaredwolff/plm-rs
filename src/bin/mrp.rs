@@ -2,6 +2,7 @@
 extern crate prettytable;
 
 mod bom;
+mod builds;
 mod parts;
 
 use clap::{crate_version, Clap};
@@ -87,6 +88,7 @@ enum BuildsSubCommand {
   Create(CreateBuild),
   Delete(DeleteBuild),
   Show(ShowBuilds),
+  Complete(CompleteBuild),
 }
 
 /// Create build manually
@@ -99,7 +101,15 @@ struct DeleteBuild {}
 
 /// Show all builds
 #[derive(Clap)]
-struct ShowBuilds {}
+struct ShowBuilds {
+  /// Show all builds. (Completed are hidden by default)
+  #[clap(short, long)]
+  show_all: bool,
+}
+
+/// Complete a build by id
+#[derive(Clap)]
+struct CompleteBuild {}
 
 /// A subcommand for adding/modifying/removing/completing builds
 #[derive(Clap)]
@@ -141,13 +151,16 @@ fn main() {
   match opts.subcmd {
     SubCommand::Builds(s) => match s.subcmd {
       BuildsSubCommand::Create(_) => {
-        println!("create!");
+        builds::create();
       }
       BuildsSubCommand::Delete(_) => {
         println!("delete!");
       }
-      BuildsSubCommand::Show(_) => {
-        println!("show!");
+      BuildsSubCommand::Show(a) => {
+        builds::show(a.show_all);
+      }
+      BuildsSubCommand::Complete(_) => {
+        println!("complete");
       }
     },
     SubCommand::Inventory(s) => match s.subcmd {

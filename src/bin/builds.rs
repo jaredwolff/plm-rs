@@ -1,15 +1,106 @@
-// Completing a build will:
-// Double check inventory
-// Then once permission is granted:
-// Calculate unit price (add up all inventory and divide by build count)
-// Add an inventory entry to mark used.
-
 extern crate diesel;
 extern crate mrp;
+
+use prettytable::Table;
 
 use self::diesel::prelude::*;
 use self::models::*;
 use self::mrp::*;
+
+use std::io;
+
+pub fn create() {
+  // For prompts
+  let stdio = io::stdin();
+  let input = stdio.lock();
+  let output = io::stdout();
+
+  let mut prompt = prompt::Prompt {
+    reader: input,
+    writer: output,
+  };
+
+  let connection = establish_connection();
+
+  // Get the input from stdin
+  let part_number = prompt.ask_text_entry("Part Number: ");
+  let version = prompt.ask_text_entry("Version: ");
+  let version: i32 = version.trim().parse().expect("Invalid version number!");
+  let quantity = prompt.ask_text_entry("Quantity: ");
+  let quantity: i32 = quantity.trim().parse().expect("Invalid quantity!");
+
+  let part = find_part_by_pn(&connection, &part_number);
+
+  if part.is_err() {
+    println!("{} version {} was not found!", part_number, version);
+    std::process::exit(1);
+  }
+
+  // Transform the response into a Part
+  let part = part.unwrap();
+
+  if part.ver != version {
+    println!(
+      "{} version {} was not found! Latest is: {}",
+      part_number, version, part.ver
+    );
+    std::process::exit(1);
+  }
+
+  let build = NewUpdateBuild {
+    quantity: &quantity,
+    complete: &0,
+    notes: Some(""),
+    part_ver: &version,
+    part_id: &part.id,
+  };
+
+  create_build(&connection, &build).expect("Unable to create build!");
+
+  println!(
+    "Created build of {} ver: {} with qty: {}",
+    part.pn, part.ver, quantity
+  );
+}
+
+pub fn show(show_all: bool) {
+  use mrp::schema::*;
+
+  // Create the table
+  let mut table = Table::new();
+
+  let connection = establish_connection();
+  let results: Vec<Build>;
+
+  if show_all {
+    results = builds::dsl::builds
+      .load::<models::Build>(&connection)
+      .expect("Error loading builds");
+  } else {
+    results = builds::dsl::builds
+      .filter(builds::dsl::complete.eq(0))
+      .load::<models::Build>(&connection)
+      .expect("Error loading builds");
+  }
+
+  println!("Displaying {} builds", results.len());
+  table.add_row(row![
+    "Build ID", "PN", "Ver", "Notes", "Complete", "Quantity"
+  ]);
+  for build in results {
+    // Get the part info..
+    let part = find_part_by_id(&connection, &build.part_id).expect("Unable to get build part.");
+    table.add_row(row![
+      build.id,
+      part.pn,
+      build.part_ver,
+      build.notes.unwrap(),
+      build.complete,
+      build.quantity
+    ]);
+  }
+  table.printstd();
+}
 
 struct Shortage {
   pid: i32,
@@ -19,18 +110,11 @@ struct Shortage {
   short: i32,
 }
 
-use std::env::args;
-use std::io;
-
-fn main() {
+pub fn complete(build_id: i32) {
   use mrp::schema::*;
 
   // Establish connection!
   let conn = establish_connection();
-
-  // Takes a .sch file as an input
-  let build_id = args().nth(1).expect("Need a build number as an argument.");
-  let build_id = build_id.parse::<i32>().unwrap();
 
   // Get the build
   let build = find_build_by_id(&conn, &build_id).expect("Unable to find build!");
@@ -166,8 +250,8 @@ fn main() {
 
       // Calculate the quantity
       for entry in inventory_entries {
-        let mut new_qty;
-        let mut used;
+        let new_qty;
+        let used;
 
         // Calculate quantities
         if entry.quantity >= quantity {
@@ -252,3 +336,7 @@ fn main() {
     create_inventory(&conn, &new_inventory).expect("Unable to create inventory.");
   }
 }
+
+// Prevent Visual Code from barfing
+#[allow(dead_code)]
+fn main() {}
