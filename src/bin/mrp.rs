@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate prettytable;
 
+mod bom;
 mod parts;
 
 use clap::{crate_version, Clap};
@@ -18,6 +19,27 @@ enum SubCommand {
   Parts(Parts),
   Builds(Builds),
   Inventory(Inventory),
+  Bom(Bom),
+}
+
+/// A subcommand for adding/modifying/removing parts
+#[derive(Clap)]
+struct Bom {
+  #[clap(subcommand)]
+  subcmd: BomSubCommand,
+}
+
+#[derive(Clap)]
+#[clap(version = crate_version!())]
+enum BomSubCommand {
+  Import(ImportBom),
+}
+
+/// A subcommand for importing a bom from an Eagle .sch file
+#[derive(Clap)]
+struct ImportBom {
+  #[clap(short, long)]
+  filename: String,
 }
 
 /// A subcommand for adding/modifying/removing parts
@@ -136,6 +158,11 @@ fn main() {
       }
       PartsSubCommand::Show(_) => {
         parts::show();
+      }
+    },
+    SubCommand::Bom(s) => match s.subcmd {
+      BomSubCommand::Import(a) => {
+        bom::import(&a.filename);
       }
     },
   }

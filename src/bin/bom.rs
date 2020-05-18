@@ -3,17 +3,13 @@ extern crate mrp;
 extern crate quick_xml;
 extern crate serde;
 
-#[macro_use]
-extern crate prettytable;
 use prettytable::Table;
-
 use quick_xml::de::from_reader;
 
 use self::diesel::prelude::*;
 use self::mrp::*;
 
 use std::env;
-use std::env::args;
 
 use std::fs::File;
 use std::io::{self, BufReader};
@@ -26,7 +22,7 @@ struct LineItem {
   nostuff: i32,
 }
 
-fn main() {
+pub fn import(filename: &String) {
   use mrp::schema::parts::dsl::*;
 
   // For prompts
@@ -42,11 +38,18 @@ fn main() {
   // Establish connection!
   let conn = establish_connection();
 
-  // Takes a .sch file as an input
-  let filename = args().nth(1).expect("Need a filename as an argument.");
-
   // Open the file
-  let file = File::open(filename).unwrap();
+  let file = File::open(filename);
+
+  // Make sure it's valid
+  let file = match file {
+    Ok(x) => x,
+    Err(_) => {
+      println!("Unable to open {}", filename);
+      std::process::exit(1);
+    }
+  };
+
   let file = BufReader::new(file);
   let eagle: schematic::Eagle = from_reader(file).expect("error parsing xml");
 
