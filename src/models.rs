@@ -58,17 +58,19 @@ pub struct Inventory {
     pub consumed: i32,
     pub unit_price: Option<f32>,
     pub notes: Option<String>,
+    pub part_ver: i32,
     pub part_id: i32,
 }
 
 #[derive(Debug, Insertable, AsChangeset)]
 #[table_name = "inventories"]
-pub struct NewInventoryEntry<'a> {
+pub struct NewUpdateInventoryEntry<'a> {
     pub quantity: &'a i32,
     pub consumed: &'a i32,
     pub unit_price: Option<&'a f32>,
-    pub part_id: &'a i32,
     pub notes: Option<&'a str>,
+    pub part_ver: &'a i32,
+    pub part_id: &'a i32,
 }
 
 #[derive(Identifiable, Queryable)]
@@ -88,10 +90,10 @@ pub struct Build {
 
 #[derive(Debug, Insertable, AsChangeset)]
 #[table_name = "builds"]
-pub struct NewBuild<'a> {
+pub struct NewUpdateBuild<'a> {
     pub quantity: &'a i32,
     pub complete: &'a i32,
-    pub notes: &'a str,
+    pub notes: Option<&'a str>,
     pub part_ver: &'a i32,
     pub part_id: &'a i32,
 }

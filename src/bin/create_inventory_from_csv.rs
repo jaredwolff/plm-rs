@@ -75,8 +75,9 @@ fn main() {
     let part = find_part_by_pn(&conn, &record.part_number).expect("Unable to get part.");
 
     // Commits change
-    let entry = NewInventoryEntry {
+    let entry = NewUpdateInventoryEntry {
       part_id: &part.id,
+      part_ver: &part.ver,
       unit_price: Some(&record.unit_price),
       quantity: &record.quantity,
       consumed: &0,

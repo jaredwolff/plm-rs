@@ -35,6 +35,11 @@ fn main() {
   // Create a table of all parts and computed inventory
   // and shortages (indicated in - or + numbers)
   for build in results {
+    // Skip over to the next one. This build is done!
+    if build.complete == 1 {
+      continue;
+    }
+
     // First get the parts.
     let bom_list = parts_parts::dsl::parts_parts
       .filter(parts_parts::dsl::bom_part_id.eq(build.part_id))

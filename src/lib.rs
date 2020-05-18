@@ -96,12 +96,24 @@ pub fn create_bom_line_item(
 
 pub fn create_build(
   conn: &SqliteConnection,
-  build: &NewBuild,
+  build: &NewUpdateBuild,
 ) -> std::result::Result<usize, diesel::result::Error> {
   use schema::builds;
 
   diesel::insert_into(builds::table)
     .values(build)
+    .execute(conn)
+}
+
+pub fn update_build_by_id(
+  conn: &SqliteConnection,
+  id: &i32,
+  entry: &NewUpdateBuild,
+) -> std::result::Result<usize, diesel::result::Error> {
+  use schema::builds;
+
+  diesel::update(builds::dsl::builds.filter(builds::dsl::id.eq(id)))
+    .set(entry)
     .execute(conn)
 }
 
@@ -118,16 +130,39 @@ pub fn find_builds_by_pn(
     .load::<Build>(conn)
 }
 
+pub fn find_build_by_id(
+  conn: &SqliteConnection,
+  id: &i32,
+) -> std::result::Result<Build, diesel::result::Error> {
+  use schema::builds;
+
+  builds::dsl::builds
+    .filter(builds::dsl::id.eq(id))
+    .first(conn)
+}
+
 // Inventory related
 
 pub fn create_inventory(
   conn: &SqliteConnection,
-  entry: &NewInventoryEntry,
+  entry: &NewUpdateInventoryEntry,
 ) -> std::result::Result<usize, diesel::result::Error> {
   use schema::inventories;
 
   diesel::insert_into(inventories::table)
     .values(entry)
+    .execute(conn)
+}
+
+pub fn update_inventory_by_id(
+  conn: &SqliteConnection,
+  id: &i32,
+  entry: &NewUpdateInventoryEntry,
+) -> std::result::Result<usize, diesel::result::Error> {
+  use schema::inventories;
+
+  diesel::update(inventories::dsl::inventories.filter(inventories::dsl::id.eq(id)))
+    .set(entry)
     .execute(conn)
 }
 

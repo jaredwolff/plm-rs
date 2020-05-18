@@ -20,6 +20,7 @@ CREATE TABLE inventories (
   consumed INTEGER NOT NULL DEFAULT 0, -- how many that were consumed
   unit_price REAL, -- the unit price
   notes TEXT, -- notes
+  part_ver INTEGER NOT NULL, -- the version of the part this is referring to..
   part_id INTEGER NOT NULL, -- the part that is associated with the inventory
   FOREIGN KEY(part_id) REFERENCES parts(id) --only one part associated with this inventory (many to one)
 );

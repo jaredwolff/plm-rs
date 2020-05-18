@@ -37,7 +37,7 @@ fn main() {
     std::process::exit(1);
   }
 
-  let build = NewBuild {
+  let build = NewUpdateBuild {
     quantity: &quantity,
     complete: &0,
     notes: "",

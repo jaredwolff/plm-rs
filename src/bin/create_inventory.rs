@@ -50,7 +50,7 @@ fn main() {
   // Confirm change (y/n)
   if proceed {
     // Commits change
-    let entry = NewInventoryEntry {
+    let entry = NewUpdateInventoryEntry {
       part_id: &part.id,
       unit_price: Some(&0.0),
       quantity: &adj,

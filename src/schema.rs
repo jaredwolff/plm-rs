@@ -22,6 +22,7 @@ table! {
         consumed -> Integer,
         unit_price -> Nullable<Float>,
         notes -> Nullable<Text>,
+        part_ver -> Integer,
         part_id -> Integer,
     }
 }
