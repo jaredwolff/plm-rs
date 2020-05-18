@@ -22,9 +22,26 @@ embed_migrations!();
 pub fn establish_connection() -> SqliteConnection {
   dotenv().ok();
 
-  let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-  SqliteConnection::establish(&database_url)
-    .unwrap_or_else(|_| panic!("Error connecting to {}", database_url))
+  // Get the URL.
+  let database_url = env::var("DATABASE_URL");
+
+  // Default if DATABASE_URL is not set
+  let database_url = match database_url {
+    Ok(x) => x,
+    Err(_) => {
+      println!("env DATABASE_URL not set. Using default of ./database.db");
+      "./database.db".to_string()
+    }
+  };
+
+  // Establish the "connection" (We're using SQLite here so no connection excpet to the filesystem)
+  let conn = SqliteConnection::establish(&database_url)
+    .unwrap_or_else(|_| panic!("Error connecting to {}", database_url));
+
+  // This will run the necessary migrations.
+  embedded_migrations::run(&conn).expect("Unable to run test migration.");
+
+  conn
 }
 
 // Part related
