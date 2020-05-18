@@ -39,7 +39,7 @@ pub fn create() {
   let found = find_part_by_pn(&connection, &pn);
 
   // If already found ask if it should be updated
-  if found.is_err() {
+  if found.is_ok() {
     let question = format!("{} already exists! Would you like to update it?", pn);
     let update = prompt.ask_yes_no_question(&question);
 
