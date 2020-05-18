@@ -42,7 +42,7 @@ If you have inventory, you can track it here! You can add inventory one by one o
 
 ### Complete a Build
 
-Finally you can check your shortages and then complete your build. Use `mrp builds complete -b <your build  id>` to finish up. This command will double check your inventory is up to snuff before completing your build though!
+Finally you can check your shortages and then complete your build. Use `mrp build complete -b <your build  id>` to finish up. This command will double check your inventory is up to snuff before completing your build though!
 
 ![Complete Build Not Ready](images/complete-still-short.png)
 
@@ -85,6 +85,7 @@ If you have parts distributed across many libraries, this solution will not work
 * [ ] Update inventory from CSV
 * [x] Complete a build and consume inventory
 * [x] Unified binary
+* [ ] Part substitutions
 * [ ] Documentation
 
 ## Handy URLS
@@ -96,13 +97,13 @@ If you have parts distributed across many libraries, this solution will not work
 
 ```
 cargo run --bin mrp bom import -f /Users/jaredwolff/Documents/eagle/projects/pm25/pm25.sch
-cargo run --bin mrp builds create
+cargo run --bin mrp build create
 cargo run --bin mrp inventory show -s
 cargo run --bin mrp inventory create -f test/inventory.csv
 cargo run --bin mrp inventory show -s
 cargo run --bin mrp inventory show
-cargo run --bin mrp builds show -a
-cargo run --bin mrp builds complete -b 1
+cargo run --bin mrp build show -a
+cargo run --bin mrp build complete -b 1
 ```
 
 ## License

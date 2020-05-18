@@ -19,7 +19,7 @@ struct Opts {
 #[clap(version = crate_version!())]
 enum SubCommand {
   Parts(Parts),
-  Builds(Builds),
+  Build(Build),
   Inventory(Inventory),
   Bom(Bom),
 }
@@ -85,7 +85,7 @@ struct ShowParts {}
 
 #[derive(Clap)]
 #[clap(version = crate_version!())]
-enum BuildsSubCommand {
+enum BuildSubCommand {
   Create(CreateBuild),
   Delete(DeleteBuild),
   Show(ShowBuilds),
@@ -118,9 +118,9 @@ struct CompleteBuild {
 
 /// A subcommand for adding/modifying/removing/completing builds
 #[derive(Clap)]
-struct Builds {
+struct Build {
   #[clap(subcommand)]
-  subcmd: BuildsSubCommand,
+  subcmd: BuildSubCommand,
 }
 
 /// A subcommand for adding/modifying/removing inventory
@@ -162,17 +162,17 @@ fn main() {
   let opts: Opts = Opts::parse();
 
   match opts.subcmd {
-    SubCommand::Builds(s) => match s.subcmd {
-      BuildsSubCommand::Create(_) => {
+    SubCommand::Build(s) => match s.subcmd {
+      BuildSubCommand::Create(_) => {
         builds::create();
       }
-      BuildsSubCommand::Delete(_) => {
+      BuildSubCommand::Delete(_) => {
         println!("delete!");
       }
-      BuildsSubCommand::Show(a) => {
+      BuildSubCommand::Show(a) => {
         builds::show(a.all);
       }
-      BuildsSubCommand::Complete(a) => {
+      BuildSubCommand::Complete(a) => {
         builds::complete(a.build_id);
       }
     },
