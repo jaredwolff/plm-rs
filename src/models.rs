@@ -5,13 +5,14 @@ use chrono::NaiveDateTime;
 #[derive(Identifiable, Queryable)]
 pub struct Part {
     pub id: i32,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
     pub pn: String,
     pub mpn: String,
     pub digikeypn: Option<String>,
     pub descr: String,
     pub ver: i32,
     pub val: Option<String>,
-    pub created_at: NaiveDateTime,
 }
 
 #[derive(Eq, PartialEq, Debug, Insertable, AsChangeset)]
@@ -26,9 +27,12 @@ pub struct NewUpdatePart<'a> {
 #[derive(Identifiable, Queryable)]
 pub struct PartsPart {
     pub id: i32,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
     pub quantity: i32,
     pub bom_ver: i32,
     pub refdes: String,
+    pub nostuff: i32,
     pub bom_part_id: i32,
     pub part_id: i32,
 }
@@ -39,6 +43,7 @@ pub struct NewPartsParts<'a> {
     pub quantity: &'a i32,
     pub bom_ver: &'a i32,
     pub refdes: &'a str,
+    pub nostuff: &'a i32,
     pub bom_part_id: &'a i32,
     pub part_id: &'a i32,
 }
@@ -47,10 +52,12 @@ pub struct NewPartsParts<'a> {
 #[table_name = "inventories"]
 pub struct Inventory {
     pub id: i32,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
     pub quantity: i32,
+    pub consumed: i32,
     pub unit_price: Option<f32>,
     pub notes: Option<String>,
-    pub created_at: NaiveDateTime,
     pub part_id: i32,
 }
 
@@ -58,6 +65,7 @@ pub struct Inventory {
 #[table_name = "inventories"]
 pub struct NewInventoryEntry<'a> {
     pub quantity: &'a i32,
+    pub consumed: &'a i32,
     pub unit_price: Option<&'a f32>,
     pub part_id: &'a i32,
     pub notes: Option<&'a str>,
@@ -68,6 +76,7 @@ pub struct NewInventoryEntry<'a> {
 pub struct Build {
     pub id: i32,
     pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
     pub estimated_completion: NaiveDateTime,
     pub quantity: i32,
     pub cost: Option<f32>,

@@ -79,6 +79,7 @@ fn main() {
       part_id: &part.id,
       unit_price: Some(&record.unit_price),
       quantity: &record.quantity,
+      consumed: &0,
       notes: Some(&record.notes),
     };
 

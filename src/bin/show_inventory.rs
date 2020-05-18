@@ -21,7 +21,7 @@ fn main() {
     .expect("Error loading parts");
 
   println!("Displaying {} parts", results.len());
-  table.add_row(row!["PN", "Desc", "Qty", "Unit Price", "Notes"]);
+  table.add_row(row!["PN", "Desc", "Qty", "Consumed", "Unit Price", "Notes"]);
   for inventory in results {
     // Check if part number exists
     let part = find_part_by_id(&connection, &inventory.part_id).expect("Unable to get part.");
@@ -30,6 +30,7 @@ fn main() {
       part.pn,
       part.descr,
       inventory.quantity,
+      inventory.consumed,
       inventory.unit_price.unwrap_or(0.0),
       inventory.notes.unwrap_or("".to_string())
     ]);

@@ -54,6 +54,7 @@ fn main() {
       part_id: &part.id,
       unit_price: Some(&0.0),
       quantity: &adj,
+      consumed: &0,
       notes: Some(&notes),
     };
 

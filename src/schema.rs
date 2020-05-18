@@ -2,6 +2,7 @@ table! {
     builds (id) {
         id -> Integer,
         created_at -> Timestamp,
+        updated_at -> Timestamp,
         estimated_completion -> Timestamp,
         quantity -> Integer,
         cost -> Nullable<Float>,
@@ -15,10 +16,12 @@ table! {
 table! {
     inventories (id) {
         id -> Integer,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
         quantity -> Integer,
+        consumed -> Integer,
         unit_price -> Nullable<Float>,
         notes -> Nullable<Text>,
-        created_at -> Timestamp,
         part_id -> Integer,
     }
 }
@@ -26,22 +29,26 @@ table! {
 table! {
     parts (id) {
         id -> Integer,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
         pn -> Text,
         mpn -> Text,
         digikeypn -> Nullable<Text>,
         descr -> Text,
         ver -> Integer,
         val -> Nullable<Text>,
-        created_at -> Timestamp,
     }
 }
 
 table! {
     parts_parts (id) {
         id -> Integer,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
         quantity -> Integer,
         bom_ver -> Integer,
         refdes -> Text,
+        nostuff -> Integer,
         bom_part_id -> Integer,
         part_id -> Integer,
     }

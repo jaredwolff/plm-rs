@@ -23,7 +23,7 @@ struct LineItem {
   name: String,
   pn: String,
   quantity: i32,
-  nostuff: bool,
+  nostuff: i32,
 }
 
 fn main() {
@@ -169,9 +169,9 @@ fn main() {
     );
 
     // Check if it's no stuff. If so skip over adding it.
-    let mut nostuff = false;
+    let mut nostuff = 0;
     if part.variant.is_some() && part.variant.as_ref().unwrap().populate == "no" {
-      nostuff = true;
+      nostuff = 1;
     }
 
     // Create temp line item
@@ -198,7 +198,7 @@ fn main() {
     if !found {
       // If not found, add it
       list.push(item);
-    } else if !nostuff {
+    } else if nostuff == 0 {
       // Increase the quantity
       list[position].name = format!("{} {}", list[position].name, item.name);
       list[position].quantity += 1;
@@ -319,6 +319,7 @@ fn main() {
         quantity: &item.quantity,
         bom_ver: &bom_item.ver,
         refdes: &item.name,
+        nostuff: &item.nostuff,
         bom_part_id: &bom_item.id,
         part_id: &line_item.id,
       };

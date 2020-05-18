@@ -44,6 +44,12 @@ fn main() {
 
     // Iterate though the results and check inventory
     for bom_list_entry in bom_list {
+      // Skip if nostuff is set
+      if bom_list_entry.nostuff == 1 {
+        println!("item is no stuff {}", bom_list_entry.refdes);
+        continue;
+      }
+
       // Serach for part in inventory. Do calculations as necessary.
       let mut quantity = 0;
 
@@ -62,8 +68,15 @@ fn main() {
       // Check in shortage list, do some calculations if that item exists
       for mut entry in &mut shortages {
         if entry.pid == bom_list_entry.part_id {
+          // Set short to 0 if > 0
+          let mut short = quantity - entry.needed;
+          if short > 0 {
+            short = 0;
+          }
+
+          // Then set the variables
           entry.needed += build.quantity * bom_list_entry.quantity;
-          entry.short = quantity - entry.needed;
+          entry.short = short;
           found_in_shortage_list = true;
           break;
         }
