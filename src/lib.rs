@@ -50,6 +50,15 @@ pub fn update_part(
     .execute(conn)
 }
 
+pub fn delete_part(
+  conn: &SqliteConnection,
+  id: &i32,
+) -> std::result::Result<usize, diesel::result::Error> {
+  use schema::parts;
+
+  diesel::delete(parts::dsl::parts.filter(parts::dsl::id.eq(id))).execute(conn)
+}
+
 pub fn find_part_by_pn(
   conn: &SqliteConnection,
   pn: &str,

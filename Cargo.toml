@@ -15,3 +15,4 @@ chrono = "0.4.11"
 prettytable-rs = "^0.8"
 quick-xml = { version = "^0.18.1", features = [ "serialize" ] }
 serde = { version = "^1.0", features = [ "derive" ] }
+clap = "~3.0.0-beta.1"
