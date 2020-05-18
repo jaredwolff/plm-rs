@@ -39,13 +39,12 @@ pub fn create_part(
 
 pub fn update_part(
   conn: &SqliteConnection,
+  id: &i32,
   part: &NewUpdatePart,
 ) -> std::result::Result<usize, diesel::result::Error> {
   use schema::parts;
 
-  // TODO: provides part ID?
-  // TODO: match the error for create_part
-  diesel::update(parts::dsl::parts.filter(parts::dsl::pn.eq(part.pn)))
+  diesel::update(parts::dsl::parts.filter(parts::dsl::id.eq(id)))
     .set(part)
     .execute(conn)
 }
@@ -186,7 +185,6 @@ pub fn find_inventories_by_part_id(
     .load::<Inventory>(conn)
 }
 
-#[allow(dead_code)]
 pub fn test_connection() -> SqliteConnection {
   // Start a connection from memory
   let conn = SqliteConnection::establish(":memory:").expect("Unable to establish db in memory!");
@@ -311,6 +309,9 @@ mod part_tests {
     // Create the part
     create_part(&conn, &part).expect("Error creating part!");
 
+    // Get part back
+    let found = find_part_by_pn(&conn, &part.pn).expect("Error getting part back.");
+
     // Update the value
     let part = NewUpdatePart {
       pn: "CAP-0.1U-10V-0402",
@@ -320,7 +321,7 @@ mod part_tests {
     };
 
     // Update the part
-    update_part(&conn, &part).expect("Error creating part!");
+    update_part(&conn, &found.id, &part).expect("Error creating part!");
 
     // Serach for it and make sure that it matches
     let found: Part = parts.find(1).first(&conn).unwrap();

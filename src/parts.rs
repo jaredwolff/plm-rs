@@ -36,35 +36,22 @@ pub fn create() {
     ver: &ver,
   };
 
-  let res = create_part(&connection, &part);
-
-  // Check for success
-  let found = match res {
-    Ok(_) => {
-      println!("{} created!", pn);
-      std::process::exit(0)
-    }
-    Err(_) => true,
-  };
+  let found = find_part_by_pn(&connection, &pn);
 
   // If already found ask if it should be updated
-  if found {
+  if found.is_err() {
     let question = format!("{} already exists! Would you like to update it?", pn);
     let update = prompt.ask_yes_no_question(&question);
 
     // Update if they said yes.
     if update {
-      let res = update_part(&connection, &part);
+      update_part(&connection, &found.unwrap().id, &part).expect("Unable to update part!");
 
       // Check for success
-      match res {
-        Ok(_) => println!("{} updated!", pn),
-        Err(_) => {
-          println!("unable to update {}", pn);
-          std::process::exit(1);
-        }
-      };
+      println!("{} updated!", pn);
     }
+  } else {
+    create_part(&connection, &part).expect("Unable to create part!");
   }
 }
 

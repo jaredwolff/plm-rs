@@ -208,8 +208,6 @@ pub fn import(filename: &String) {
     }
   }
 
-  // TODO: use list to create BOM setup
-
   // Create the table for viewing
   let mut table = Table::new();
   table.add_row(row!["Part Number", "Refdes", "Quantity", "No Stuff"]);
@@ -300,7 +298,7 @@ pub fn import(filename: &String) {
         let yes = prompt.ask_yes_no_question(&question);
 
         if yes {
-          update_part(&conn, &part).expect("Error updating part!");
+          update_part(&conn, &first.id, &part).expect("Error updating part!");
         }
       }
     }

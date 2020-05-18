@@ -231,7 +231,6 @@ pub fn show_shortage() {
         quantity += entry.quantity;
       }
 
-      // TODO: push a new temp inventory struct
       // This struct has, inventory quantity (+/-), quantity needed, part name
       let mut found_in_shortage_list = false;
 
