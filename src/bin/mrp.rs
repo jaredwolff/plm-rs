@@ -3,6 +3,7 @@ extern crate prettytable;
 
 mod bom;
 mod builds;
+mod inventory;
 mod parts;
 
 use clap::{crate_version, Clap};
@@ -104,12 +105,16 @@ struct DeleteBuild {}
 struct ShowBuilds {
   /// Show all builds. (Completed are hidden by default)
   #[clap(short, long)]
-  show_all: bool,
+  all: bool,
 }
 
 /// Complete a build by id
 #[derive(Clap)]
-struct CompleteBuild {}
+struct CompleteBuild {
+  /// ID for the build. Get an id from builds show
+  #[clap(short, long)]
+  build_id: i32,
+}
 
 /// A subcommand for adding/modifying/removing/completing builds
 #[derive(Clap)]
@@ -133,9 +138,13 @@ enum InventorySubCommand {
   Show(ShowInventory),
 }
 
-/// Create inventory manually
+/// Create inventory manually or by importing .csv
 #[derive(Clap)]
-struct CreateInventory {}
+struct CreateInventory {
+  /// Create inventory from a optional .csv file
+  #[clap(short, long)]
+  filename: Option<String>,
+}
 
 /// Delete inventory manually
 #[derive(Clap)]
@@ -143,7 +152,11 @@ struct DeleteInventory {}
 
 /// Show all inventory
 #[derive(Clap)]
-struct ShowInventory {}
+struct ShowInventory {
+  /// Show inventory shortages
+  #[clap(short, long)]
+  show_shortage: bool,
+}
 
 fn main() {
   let opts: Opts = Opts::parse();
@@ -157,21 +170,28 @@ fn main() {
         println!("delete!");
       }
       BuildsSubCommand::Show(a) => {
-        builds::show(a.show_all);
+        builds::show(a.all);
       }
-      BuildsSubCommand::Complete(_) => {
-        println!("complete");
+      BuildsSubCommand::Complete(a) => {
+        builds::complete(a.build_id);
       }
     },
     SubCommand::Inventory(s) => match s.subcmd {
-      InventorySubCommand::Create(_) => {
-        println!("create!");
+      InventorySubCommand::Create(a) => {
+        match a.filename {
+          Some(x) => inventory::create_from_file(&x),
+          None => inventory::create(),
+        };
       }
       InventorySubCommand::Delete(_) => {
         println!("delete!");
       }
-      InventorySubCommand::Show(_) => {
-        println!("show!");
+      InventorySubCommand::Show(a) => {
+        if a.show_shortage {
+          inventory::show_shortage()
+        } else {
+          inventory::show();
+        }
       }
     },
     SubCommand::Parts(s) => match s.subcmd {

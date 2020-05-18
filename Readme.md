@@ -1,7 +1,7 @@
 ## Migrations
 
 `diesel migration run` to get to the latest
-`diesel migration rever` to roll back
+`diesel migration revert` to roll back
 
 ## Roadmap
 
@@ -14,7 +14,8 @@
 * [x] Add inventory from CSV
 * [ ] Update inventory from CSV
 * [x] Complete a build and consume inventory
-* [ ] Unified binary
+* [x] Unified binary
+* [ ] Documentation
 
 ## Running a command
 

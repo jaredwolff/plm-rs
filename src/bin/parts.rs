@@ -123,5 +123,6 @@ pub fn show() {
   table.printstd();
 }
 
+// Prevent Visual Code from barfing
 #[allow(dead_code)]
 fn main() {}
