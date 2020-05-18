@@ -336,7 +336,3 @@ pub fn complete(build_id: i32) {
     create_inventory(&conn, &new_inventory).expect("Unable to create inventory.");
   }
 }
-
-// Prevent Visual Code from barfing
-#[allow(dead_code)]
-fn main() {}

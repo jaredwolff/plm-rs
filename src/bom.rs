@@ -414,7 +414,3 @@ pub fn show(part_number: &String, version: &i32) {
   }
   table.printstd();
 }
-
-// Prevent Visual Code from barfing
-#[allow(dead_code)]
-fn main() {}

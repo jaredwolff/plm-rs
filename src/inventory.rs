@@ -297,7 +297,3 @@ pub fn show_shortage() {
 
   table.printstd();
 }
-
-// Prevent Visual Code from barfing
-#[allow(dead_code)]
-fn main() {}
