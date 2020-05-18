@@ -6,19 +6,13 @@ use self::mrp::*;
 
 use std::io;
 
-// Local includes
-#[path = "../prompt.rs"]
-mod prompt;
-
-use crate::prompt::Prompt;
-
 fn main() {
   // For prompts
   let stdio = io::stdin();
   let input = stdio.lock();
   let output = io::stdout();
 
-  let mut prompt = Prompt {
+  let mut prompt = prompt::Prompt {
     reader: input,
     writer: output,
   };

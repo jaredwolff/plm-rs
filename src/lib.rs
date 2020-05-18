@@ -6,7 +6,9 @@ extern crate dotenv;
 extern crate diesel_migrations;
 
 pub mod models;
+pub mod prompt;
 pub mod schema;
+pub mod schematic;
 
 use diesel::prelude::*;
 use dotenv::dotenv;

@@ -18,14 +18,6 @@ use std::env::args;
 use std::fs::File;
 use std::io::{self, BufReader};
 
-// Local includes
-#[path = "../prompt.rs"]
-mod prompt;
-#[path = "../schematic.rs"]
-mod schematic;
-
-use prompt::Prompt;
-
 #[derive(Eq, PartialEq)]
 struct LineItem {
   name: String,
@@ -42,7 +34,7 @@ fn main() {
   let input = stdio.lock();
   let output = io::stdout();
 
-  let mut prompt = Prompt {
+  let mut prompt = prompt::Prompt {
     reader: input,
     writer: output,
   };
