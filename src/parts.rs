@@ -82,10 +82,9 @@ pub fn delete() {
     let res = delete_part(&connection, &part.id);
 
     // Depending on the result show the feedback
-    match res {
-      Ok(_) => println!("{} deleted!", part.pn),
-      Err(error) => panic!("Error deleting part {} => {:?}", part.pn, error),
-    };
+    if res.is_err() {
+      panic!("Error deleting part {}.", part.pn);
+    }
   }
 
   println!("Deleted {}", part.pn);

@@ -216,7 +216,6 @@ pub fn show_shortage() {
     for bom_list_entry in bom_list {
       // Skip if nostuff is set
       if bom_list_entry.nostuff == 1 {
-        println!("item is no stuff {}", bom_list_entry.refdes);
         continue;
       }
 
