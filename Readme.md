@@ -1,3 +1,28 @@
+# An Eagle Powered PLM + MRP for your command line!
+
+This project utilizes the built-in capabilities of Eagle to store part data. Use this project to
+capture your bill of materials. Use it to track inventories. Use it to create builds and
+consume inventory accordingly! It's not meant to replace PLM systems like Aligni but rather
+supplement product makers who may not be able to pay for it.
+
+## Building
+
+To build run `cargo build --release`. The release will be placed in `target/release`. As of this writing
+the bin is called `mrp`.
+
+## .env file
+
+You do need an `.env` file. You should define your DB name/location and also the database you're using inside your schematic.
+
+Example:
+
+```
+DATABASE_URL=./database.db
+DEFAULT_LIBRARY_NAME=wolff-den
+```
+
+If you have parts distributed across many libraries, this solution will not work for you.
+
 ## Migrations
 
 `diesel migration run` to get to the latest
@@ -16,14 +41,6 @@
 * [x] Complete a build and consume inventory
 * [x] Unified binary
 * [ ] Documentation
-
-## Running a command
-
-*Create a part manually*
-`cargo run --bin create_part`
-
-*Show all parts in db*
-`cargo run --bin show_parts`
 
 ## Handy URLS
 
