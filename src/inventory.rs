@@ -16,7 +16,7 @@ use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 struct Record {
-  part_number: String,
+  mpn: String,
   quantity: i32,
   notes: String,
   unit_price: f32,
@@ -53,14 +53,12 @@ pub fn create_from_file(filename: &String) {
 
   for record in &records {
     // Check if part number exists
-    let part = find_part_by_pn(&conn, &record.part_number);
+    // Uses MPN as it's the common denominator between this and Digikey/Arrow/Mouser etc.
+    let part = find_part_by_mpn(&conn, &record.mpn);
 
     // If theres an error exit so the user can fix the problem.
     if part.is_err() {
-      println!(
-        "{} was not found! No changes were made.",
-        record.part_number
-      );
+      println!("{} was not found! No changes were made.", record.mpn);
       std::process::exit(1);
     }
   }
@@ -68,7 +66,7 @@ pub fn create_from_file(filename: &String) {
   // Re iterate now that we know the parts are all valid
   for record in &records {
     // Check if part number exists
-    let part = find_part_by_pn(&conn, &record.part_number).expect("Unable to get part.");
+    let part = find_part_by_mpn(&conn, &record.mpn).expect("Unable to get part.");
 
     // Commits change
     let entry = NewUpdateInventoryEntry {

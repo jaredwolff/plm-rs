@@ -114,6 +114,10 @@ pub fn import(filename: &String) {
           .filter(id.eq(bom.id))
           .execute(&conn)
           .expect("Unable to update BOM revision!");
+      } else {
+        // Remove all previous BOM entries.
+        delete_bom_list_by_id_and_ver(&conn, &bom.id, &bom.ver)
+          .expect("Unable to delete previous entries");
       }
     } else {
       // Exit then!

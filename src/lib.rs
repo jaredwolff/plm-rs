@@ -84,6 +84,17 @@ pub fn find_part_by_pn(
   parts::dsl::parts.filter(parts::dsl::pn.eq(pn)).first(conn)
 }
 
+pub fn find_part_by_mpn(
+  conn: &SqliteConnection,
+  mpn: &str,
+) -> std::result::Result<Part, diesel::result::Error> {
+  use schema::parts;
+
+  parts::dsl::parts
+    .filter(parts::dsl::mpn.eq(mpn))
+    .first(conn)
+}
+
 pub fn find_part_by_pn_and_ver(
   conn: &SqliteConnection,
   pn: &str,
@@ -115,6 +126,26 @@ pub fn create_bom_line_item(
   diesel::insert_into(parts_parts::table)
     .values(part)
     .execute(conn)
+}
+
+pub fn delete_bom_list_by_id_and_ver(
+  conn: &SqliteConnection,
+  bom_id: &i32,
+  ver: &i32,
+) -> std::result::Result<usize, diesel::result::Error> {
+  use schema::parts_parts::dsl::*;
+
+  // First get list of ids that match the bom_part_id
+  let query = parts_parts
+    .select(id)
+    .filter(bom_part_id.eq(bom_id))
+    .load::<i32>(conn)?;
+
+  // Then make sure that the bom ver is equal. Match against the ids found in the first step
+  let target = parts_parts.filter(bom_ver.eq(ver)).filter(id.eq_any(query));
+
+  // Delete appropriately
+  diesel::delete(target).execute(conn)
 }
 
 // Build related
