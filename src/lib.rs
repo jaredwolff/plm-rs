@@ -66,6 +66,20 @@ pub fn update_part(
     .execute(conn)
 }
 
+pub fn rename_part(
+  conn: &SqliteConnection,
+  oldpn: &String,
+  newpn: &String,
+) -> std::result::Result<usize, diesel::result::Error> {
+  use schema::parts::dsl::*;
+
+  let part = find_part_by_pn(&conn, &oldpn).expect("Old part not found");
+
+  diesel::update(parts.find(part.id))
+    .set(pn.eq(newpn))
+    .execute(conn)
+}
+
 pub fn delete_part(
   conn: &SqliteConnection,
   id: &i32,

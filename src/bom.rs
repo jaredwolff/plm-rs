@@ -291,6 +291,7 @@ pub fn import(filename: &String) {
 
     // Not found, create
     if existing.is_err() {
+      println!("Creating: {:?}", part);
       create_part(&conn, &part).expect("Unable to create part!");
     } else {
       // Found, check for changes.
@@ -299,6 +300,19 @@ pub fn import(filename: &String) {
       // Check for changes and ask if want to update.
       if part.mpn != first.mpn || part.descr != first.descr || *part.ver != first.ver {
         let question = format!("{} found! Would you like to update it?", first.pn);
+
+        // Create the table
+        let mut table = Table::new();
+        table.add_row(row![
+          "Current:",
+          first.pn,
+          first.mpn,
+          first.descr,
+          first.ver
+        ]);
+        table.add_row(row!["Change to:", part.pn, part.mpn, part.descr, part.ver]);
+        table.printstd();
+
         let yes = prompt.ask_yes_no_question(&question);
 
         if yes {

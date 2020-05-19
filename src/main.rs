@@ -69,6 +69,7 @@ enum PartsSubCommand {
   Create(CreateParts),
   Delete(DeleteParts),
   Show(ShowParts),
+  Rename(RenamePart),
 }
 
 /// Create parts manually
@@ -86,6 +87,10 @@ struct DeleteParts {}
 /// Show all parts
 #[derive(Clap)]
 struct ShowParts {}
+
+/// Rename a parts
+#[derive(Clap)]
+struct RenamePart {}
 
 #[derive(Clap)]
 #[clap(version = crate_version!())]
@@ -167,6 +172,7 @@ struct ShowInventory {
   show_shortage: bool,
 }
 
+// TODO: maybe reverse the arguments so that it's more of an action show inventory vs inventory show
 fn main() {
   let opts: Opts = Opts::parse();
 
@@ -203,6 +209,7 @@ fn main() {
         }
       }
     },
+    // TODO: Search for a part
     SubCommand::Parts(s) => match s.subcmd {
       PartsSubCommand::Create(a) => match a.filename {
         Some(x) => parts::create_by_csv(&x),
@@ -213,6 +220,9 @@ fn main() {
       }
       PartsSubCommand::Show(_) => {
         parts::show();
+      }
+      PartsSubCommand::Rename(_) => {
+        parts::rename();
       }
     },
     SubCommand::Bom(s) => match s.subcmd {

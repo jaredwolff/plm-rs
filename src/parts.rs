@@ -66,6 +66,26 @@ pub fn create() {
   }
 }
 
+pub fn rename() {
+  // For prompts
+  let stdio = io::stdin();
+  let input = stdio.lock();
+  let output = io::stdout();
+
+  let mut prompt = prompt::Prompt {
+    reader: input,
+    writer: output,
+  };
+
+  let connection = establish_connection();
+
+  // Get the input from stdin
+  let pn = prompt.ask_text_entry("Part Number: ");
+  let newpn = prompt.ask_text_entry("New Part Number: ");
+
+  rename_part(&connection, &pn, &newpn).expect("Unable to change pn");
+}
+
 pub fn create_by_csv(filename: &String) {
   // Establish connection!
   let conn = establish_connection();
