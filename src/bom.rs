@@ -130,6 +130,7 @@ pub fn import(filename: &String) {
       mpn: &bom_pn,
       descr: &bom_desc,
       ver: &revision,
+      mqty: &1,
     };
 
     create_part(&conn, &part).expect("Unable to create BOM part!");
@@ -146,7 +147,7 @@ pub fn import(filename: &String) {
     // TODO: a more comprehensive list or better way of filtering these..
     let check = [
       "GND", "FIDUCIAL", "MOUNTING", "FRAME", "+3V3", "TP", "VCC", "VBUS", "V5V0", "DOCFIELD",
-      "VBAT",
+      "VBAT", "VSYS",
     ];
 
     for entry in check.iter() {
@@ -189,6 +190,8 @@ pub fn import(filename: &String) {
       nostuff: nostuff,
     };
 
+    // TODO: Check if part has attribute (MQTY)
+
     // Check if list has
     let mut position = 0;
     let mut found = false;
@@ -223,16 +226,33 @@ pub fn import(filename: &String) {
   table.printstd();
 
   let mut table = Table::new();
-  table.add_row(row!["Part Number", "MPN", "Description", "Version"]);
+  table.add_row(row![
+    "Part Number",
+    "MPN",
+    "Description",
+    "Multi Quantity",
+    "Version"
+  ]);
 
   // Get MPN, DigikeyPn from Library exerpts
   for item in &list {
+    // Temporary struct creation..
+    #[derive(Debug)]
+    struct Part {
+      pn: String,
+      mpn: String,
+      descr: String,
+      ver: i32,
+      mqty: i32,
+    }
+
     // Net part to add to the list
-    let mut part = models::NewUpdatePart {
-      pn: &item.pn,
-      mpn: "",
-      descr: "",
-      ver: &1,
+    let mut part = Part {
+      pn: item.pn.clone(),
+      mpn: "".to_string(),
+      descr: "".to_string(),
+      ver: 1,
+      mqty: 1,
     };
 
     let mut found;
@@ -264,11 +284,20 @@ pub fn import(filename: &String) {
                 // Get the attributes we care about.
                 for attribute in attributes {
                   if attribute.name == "MPN" {
-                    part.mpn = &attribute.value;
+                    part.mpn = attribute.value.clone();
                   } else if attribute.name == "DIGIKEYPN" {
                     // part.digikeypn = &attribute.name;
                   } else if attribute.name == "DESC" {
-                    part.descr = &attribute.value;
+                    part.descr = attribute.value.clone();
+                  } else if attribute.name == "MQTY" {
+                    println!("found mqty {}", attribute.value);
+                    // Convert to int
+                    let mqty_temp: i32 = attribute
+                      .value
+                      .trim()
+                      .parse()
+                      .expect("Unable to convert mqty");
+                    part.mqty = mqty_temp;
                   }
                 }
               }
@@ -284,21 +313,39 @@ pub fn import(filename: &String) {
     }
 
     // Add to table view
-    table.add_row(row![part.pn, part.mpn, part.descr, part.ver]);
+    table.add_row(row![part.pn, part.mpn, part.descr, part.mqty, part.ver]);
 
     // Find part
     let existing = find_part_by_pn(&conn, &part.pn);
 
+    if part.mpn == "" {
+      println!("Manufacturer part number must be set for {}", part.pn);
+      std::process::exit(1);
+    }
+
+    // Create update object
+    let npart = models::NewUpdatePart {
+      pn: &part.pn,
+      mpn: &part.mpn,
+      descr: &part.descr,
+      ver: &part.ver,
+      mqty: &part.mqty,
+    };
+
     // Not found, create
     if existing.is_err() {
-      println!("Creating: {:?}", part);
-      create_part(&conn, &part).expect("Unable to create part!");
+      println!("Creating: {:?}", npart);
+      create_part(&conn, &npart).expect("Unable to create part!");
     } else {
       // Found, check for changes.
       let first = existing.unwrap();
 
       // Check for changes and ask if want to update.
-      if part.mpn != first.mpn || part.descr != first.descr || *part.ver != first.ver {
+      if npart.mpn != first.mpn
+        || npart.descr != first.descr
+        || *npart.ver != first.ver
+        || *npart.mqty != first.mqty
+      {
         let question = format!("{} found! Would you like to update it?", first.pn);
 
         // Create the table
@@ -308,21 +355,29 @@ pub fn import(filename: &String) {
           first.pn,
           first.mpn,
           first.descr,
+          first.mqty,
           first.ver
         ]);
-        table.add_row(row!["Change to:", part.pn, part.mpn, part.descr, part.ver]);
+        table.add_row(row![
+          "Change to:",
+          npart.pn,
+          npart.mpn,
+          npart.descr,
+          npart.mqty,
+          npart.ver
+        ]);
         table.printstd();
 
         let yes = prompt.ask_yes_no_question(&question);
 
         if yes {
-          update_part(&conn, &first.id, &part).expect("Error updating part!");
+          update_part(&conn, &first.id, &npart).expect("Error updating part!");
         }
       }
     }
 
     // Get the part ID
-    let line_item = find_part_by_pn(&conn, &part.pn);
+    let line_item = find_part_by_pn(&conn, &npart.pn);
     let bom_item = find_part_by_pn(&conn, &bom_pn);
 
     // Create BOM association between the part and the
@@ -332,10 +387,13 @@ pub fn import(filename: &String) {
       let line_item = line_item.unwrap();
       let bom_item = bom_item.unwrap();
 
+      // Calcualte the qty using item qty and mqty
+      let quantity = item.quantity * line_item.mqty;
+
       // Create the new relationship
       // ? Better way to do this?
       let relationship = models::NewPartsParts {
-        quantity: &item.quantity,
+        quantity: &quantity,
         bom_ver: &bom_item.ver,
         refdes: &item.name,
         nostuff: &item.nostuff,

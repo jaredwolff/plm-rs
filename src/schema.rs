@@ -38,6 +38,7 @@ table! {
         descr -> Text,
         ver -> Integer,
         val -> Nullable<Text>,
+        mqty -> Integer,
     }
 }
 

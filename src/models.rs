@@ -14,6 +14,7 @@ pub struct Part {
     pub descr: String,
     pub ver: i32,
     pub val: Option<String>,
+    pub mqty: i32,
 }
 
 #[derive(Eq, PartialEq, Debug, Insertable, AsChangeset)]
@@ -23,6 +24,7 @@ pub struct NewUpdatePart<'a> {
     pub mpn: &'a str,
     pub descr: &'a str,
     pub ver: &'a i32,
+    pub mqty: &'a i32,
 }
 
 #[derive(Identifiable, Queryable)]

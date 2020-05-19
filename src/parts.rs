@@ -45,6 +45,7 @@ pub fn create() {
     mpn: &mpn,
     descr: &desc,
     ver: &ver,
+    mqty: &1,
   };
 
   let found = find_part_by_pn(&connection, &pn);
@@ -126,6 +127,7 @@ pub fn create_by_csv(filename: &String) {
       mpn: &record.mpn,
       descr: &record.desc,
       ver: &1,
+      mqty: &1,
     };
 
     let found = find_part_by_pn(&conn, &part.pn);
@@ -196,10 +198,10 @@ pub fn delete() {
     // Depending on the result show the feedback
     if res.is_err() {
       panic!("Error deleting part {}.", part.pn);
+    } else {
+      println!("Deleted {}", part.pn);
     }
   }
-
-  println!("Deleted {}", part.pn);
 }
 
 pub fn show() {
@@ -214,9 +216,9 @@ pub fn show() {
     .expect("Error loading parts");
 
   println!("Displaying {} parts", results.len());
-  table.add_row(row!["PN", "MPN", "Desc", "Ver"]);
+  table.add_row(row!["PN", "MPN", "Desc", "Mqty", "Ver"]);
   for part in results {
-    table.add_row(row![part.pn, part.mpn, part.descr, part.ver]);
+    table.add_row(row![part.pn, part.mpn, part.descr, part.mqty, part.ver]);
   }
   table.printstd();
 }

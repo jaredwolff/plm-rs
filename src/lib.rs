@@ -275,6 +275,7 @@ mod part_tests {
       mpn: "ABCD",
       descr: "CAP 0.1U 10V 0402",
       ver: &1,
+      mqty: &1,
     };
 
     // Create the part
@@ -304,6 +305,7 @@ mod part_tests {
       mpn: "ABCD",
       descr: "CAP 0.1U 10V 0402",
       ver: &1,
+      mqty: &1,
     };
 
     // Create the part
@@ -315,6 +317,7 @@ mod part_tests {
       mpn: "ABCD-ND",
       descr: "CAP 0.1U 10V 0402",
       ver: &1,
+      mqty: &1,
     };
 
     // Do it again
@@ -335,6 +338,7 @@ mod part_tests {
       mpn: "ABCD",
       descr: "CAP 0.1U 10V 0402",
       ver: &1,
+      mqty: &1,
     };
 
     // Create the part
@@ -346,6 +350,7 @@ mod part_tests {
       mpn: "ABCD",
       descr: "CAP 0.1U 10V 0402",
       ver: &1,
+      mqty: &1,
     };
 
     // Do it again
@@ -366,6 +371,7 @@ mod part_tests {
       mpn: "ABCD",
       descr: "CAP 0.1U 10V 0402",
       ver: &1,
+      mqty: &1,
     };
 
     // Create the part
@@ -380,6 +386,7 @@ mod part_tests {
       mpn: "ABCD",
       descr: "CAP 0.1 10V 0402 GOOD", // Only changing this guy
       ver: &1,
+      mqty: &1,
     };
 
     // Update the part
