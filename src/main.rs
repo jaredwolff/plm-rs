@@ -1,10 +1,8 @@
 #[macro_use]
 extern crate prettytable;
 
-mod bom;
-mod builds;
-mod inventory;
-mod parts;
+mod tables;
+use tables::*;
 
 use clap::{crate_version, Clap};
 
@@ -88,7 +86,7 @@ struct DeleteParts {}
 #[derive(Clap)]
 struct ShowParts {}
 
-/// Rename a parts
+/// Rename a part
 #[derive(Clap)]
 struct RenamePart {}
 
@@ -144,6 +142,7 @@ struct Inventory {
 enum InventorySubCommand {
   Create(CreateInventory),
   Import(ImportInventory),
+  Export(ExportInventory),
   Delete(DeleteInventory),
   Show(ShowInventory),
 }
@@ -160,6 +159,14 @@ struct ImportInventory {
   filename: String,
 }
 
+/// Export inventory and shortages via .csv
+#[derive(Clap)]
+struct ExportInventory {
+  /// Inventory to a .csv file
+  #[clap(short, long)]
+  filename: String,
+}
+
 /// Delete inventory manually
 #[derive(Clap)]
 struct DeleteInventory {}
@@ -170,6 +177,9 @@ struct ShowInventory {
   /// Show inventory shortages
   #[clap(short, long)]
   show_shortage: bool,
+  /// Show show non short entries
+  #[clap(short, long)]
+  all_entries: bool,
 }
 
 // TODO: maybe reverse the arguments so that it's more of an action show inventory vs inventory show
@@ -198,12 +208,15 @@ fn main() {
       InventorySubCommand::Import(a) => {
         inventory::create_from_file(&a.filename);
       }
+      InventorySubCommand::Export(a) => {
+        inventory::export_to_file(&a.filename);
+      }
       InventorySubCommand::Delete(_) => {
         println!("delete!");
       }
       InventorySubCommand::Show(a) => {
         if a.show_shortage {
-          inventory::show_shortage()
+          inventory::show_shortage(a.all_entries);
         } else {
           inventory::show();
         }

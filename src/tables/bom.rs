@@ -190,7 +190,7 @@ pub fn import(filename: &String) {
       nostuff: nostuff,
     };
 
-    // TODO: Check if part has attribute (MQTY)
+    // TODO: Check if part has attribute (MQTY). This overrides MQTY from the library.
 
     // Check if list has
     let mut position = 0;

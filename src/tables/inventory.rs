@@ -8,11 +8,11 @@ use self::models::*;
 use self::mrp::*;
 
 use std::fs::File;
-use std::io::BufReader;
+use std::io::{BufReader, BufWriter};
 
 use std::io;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
 struct Record {
@@ -22,16 +22,19 @@ struct Record {
   unit_price: Option<f32>,
 }
 
-#[derive(Debug)]
-struct Shortage {
-  pid: i32,
-  pn: String,
-  mpn: String,
-  desc: String,
-  have: i32,
-  needed: i32,
-  short: i32,
+#[derive(Debug, Serialize)]
+pub struct Shortage {
+  pub pid: i32,
+  pub pn: String,
+  pub mpn: String,
+  pub desc: String,
+  pub refdes: String,
+  pub have: i32,
+  pub needed: i32,
+  pub short: i32,
 }
+
+// TODO: modify inventory entry manually by pn
 
 pub fn create_from_file(filename: &String) {
   // Establish connection!
@@ -191,105 +194,24 @@ pub fn show() {
   table.printstd();
 }
 
-pub fn show_shortage() {
-  use mrp::schema::*;
-
+// TODO: show shortage by build ID
+// Defualt hide non-short items. Option to view all.
+pub fn show_shortage(show_all_entries: bool) {
   // Create the table
   let mut table = Table::new();
 
-  let connection = establish_connection();
-  let results = builds::dsl::builds
-    .load::<Build>(&connection)
-    .expect("Error loading builds");
-
-  let mut shortages: Vec<Shortage> = Vec::new();
-
-  // Iterate though the builds,
-  // Create a table of all parts and computed inventory
-  // and shortages (indicated in - or + numbers)
-  for build in results {
-    // Skip over to the next one. This build is done!
-    if build.complete == 1 {
-      continue;
-    }
-
-    // First get the parts.
-    let bom_list = parts_parts::dsl::parts_parts
-      .filter(parts_parts::dsl::bom_part_id.eq(build.part_id))
-      .filter(parts_parts::dsl::bom_ver.eq(build.part_ver))
-      .load::<PartsPart>(&connection)
-      .expect("Error loading parts");
-
-    // Iterate though the results and check inventory
-    for bom_list_entry in bom_list {
-      // Skip if nostuff is set
-      if bom_list_entry.nostuff == 1 {
-        continue;
-      }
-
-      // Serach for part in inventory. Do calculations as necessary.
-      let mut quantity = 0;
-
-      let inventory_entries = find_inventories_by_part_id(&connection, &bom_list_entry.part_id)
-        .expect("Unable to query for inventory");
-
-      // Calculate the quantity
-      for entry in inventory_entries {
-        quantity += entry.quantity;
-      }
-
-      // This struct has, inventory quantity (+/-), quantity needed, part name
-      let mut found_in_shortage_list = false;
-
-      // Check in shortage list, do some calculations if that item exists
-      for mut entry in &mut shortages {
-        if entry.pid == bom_list_entry.part_id {
-          // Set short to 0 if > 0
-          let mut short = quantity - entry.needed;
-          if short > 0 {
-            short = 0;
-          }
-
-          // Then set the variables
-          entry.needed += build.quantity * bom_list_entry.quantity;
-          entry.short = short;
-          found_in_shortage_list = true;
-          break;
-        }
-      }
-
-      if !found_in_shortage_list {
-        // Get the part for more info
-        let part =
-          find_part_by_id(&connection, &bom_list_entry.part_id).expect("Unable to get part by id.");
-
-        // Calculate the amount short
-        let mut short = quantity - (build.quantity * bom_list_entry.quantity);
-
-        // To 0 if not short
-        if short > 0 {
-          short = 0;
-        }
-
-        // Create shortage item
-        let shortage = Shortage {
-          pid: bom_list_entry.part_id,
-          pn: part.pn,
-          mpn: part.mpn,
-          desc: part.descr,
-          have: quantity,
-          needed: build.quantity * bom_list_entry.quantity,
-          short: short,
-        };
-
-        // Add to shortage list
-        shortages.push(shortage);
-      }
-    }
-  }
-
   // Print out the shortages in table format.
   table.add_row(row!["PID", "PN", "MPN", "Desc", "Have", "Needed", "Short",]);
+
+  let shortages = get_shortages(show_all_entries);
+
+  let shortages = match shortages {
+    Ok(x) => x,
+    Err(e) => {
+      println!("Error getting shortages: {:?}", e);
+      std::process::exit(1);
+    }
+  };
 
   for entry in shortages {
     table.add_row(row![
@@ -304,4 +226,153 @@ pub fn show_shortage() {
   }
 
   table.printstd();
+}
+
+// Export shortages to csv
+pub fn export_to_file(filename: &String) {
+  let shortages = get_shortages(false).expect("Unable to get shortage report.");
+
+  let file = File::create(filename).unwrap();
+  let file = BufWriter::new(file);
+
+  // Create CSV writer
+  let mut wtr = csv::Writer::from_writer(file);
+
+  // Iterate and add to csv
+  for shortage in shortages {
+    wtr.serialize(shortage).expect("Unable to serialize.");
+    wtr.flush().expect("Unable to flush");
+  }
+
+  println!("Shortages exported to {}", filename);
+}
+
+pub fn get_shortages(
+  show_all_entries: bool,
+) -> std::result::Result<Vec<Shortage>, diesel::result::Error> {
+  use mrp::schema::*;
+
+  let connection = establish_connection();
+  let results = builds::dsl::builds
+    .filter(builds::dsl::complete.eq(0)) // Only show un-finished builds
+    .load::<Build>(&connection);
+
+  // Return the error if there was an issue
+  let results = match results {
+    Ok(x) => x,
+    Err(e) => return Err(e),
+  };
+
+  let mut shortages: Vec<Shortage> = Vec::new();
+
+  // Iterate though the builds,
+  // Create a table of all parts and computed inventory
+  // and shortages (indicated in - or + numbers)
+  for build in results {
+    // First get the parts.
+    let bom_list = parts_parts::dsl::parts_parts
+      .filter(parts_parts::dsl::bom_part_id.eq(build.part_id))
+      .filter(parts_parts::dsl::bom_ver.eq(build.part_ver))
+      .load::<PartsPart>(&connection);
+
+    // Return the error if there was an issue
+    let bom_list = match bom_list {
+      Ok(x) => x,
+      Err(e) => return Err(e),
+    };
+
+    // Iterate though the results and check inventory
+    for bom_list_entry in bom_list {
+      // Skip if nostuff is set
+      if bom_list_entry.nostuff == 1 {
+        continue;
+      }
+
+      // Serach for part in inventory. Do calculations as necessary.
+      let mut quantity = 0;
+
+      // Get the inventory entries
+      let inventory_entries = find_inventories_by_part_id(&connection, &bom_list_entry.part_id);
+
+      // Return the error if there was an issue
+      let inventory_entries = match inventory_entries {
+        Ok(x) => x,
+        Err(e) => return Err(e),
+      };
+
+      // Calculate the quantity
+      for entry in inventory_entries {
+        quantity += entry.quantity;
+      }
+
+      // This struct has, inventory quantity (+/-), quantity needed, part name
+      let mut found_in_shortage_list = false;
+
+      // Check in shortage list, do some calculations if that item exists
+      for mut entry in &mut shortages {
+        if entry.pid == bom_list_entry.part_id {
+          // Set short to 0 if > 0
+          let mut short = entry.needed - quantity;
+          if short < 0 {
+            short = 0;
+          }
+
+          // Then set the variables
+          entry.needed += build.quantity * bom_list_entry.quantity;
+          entry.short = short;
+          found_in_shortage_list = true;
+          break;
+        }
+      }
+
+      if !found_in_shortage_list {
+        // Get the part for more info
+        let part = find_part_by_id(&connection, &bom_list_entry.part_id);
+
+        let part = match part {
+          Ok(x) => x,
+          Err(e) => return Err(e),
+        };
+
+        // Calculate the amount short
+        let mut short = (build.quantity * bom_list_entry.quantity) - quantity;
+
+        // To 0 if not short
+        if short < 0 {
+          short = 0;
+        }
+
+        // Create shortage item
+        let shortage = Shortage {
+          pid: bom_list_entry.part_id,
+          pn: part.pn,
+          mpn: part.mpn,
+          desc: part.descr,
+          refdes: bom_list_entry.refdes.clone(),
+          have: quantity,
+          needed: build.quantity * bom_list_entry.quantity,
+          short: short,
+        };
+
+        // Add to shortage list
+        shortages.push(shortage);
+      }
+    }
+  }
+
+  // Remove items that are short = 0
+  if !show_all_entries {
+    let mut only_shortages: Vec<Shortage> = Vec::new();
+
+    for shortage in shortages {
+      if shortage.short != 0 {
+        only_shortages.push(shortage);
+      }
+    }
+
+    Ok(only_shortages)
+  } else {
+    //return the shortages
+    Ok(shortages)
+  }
 }

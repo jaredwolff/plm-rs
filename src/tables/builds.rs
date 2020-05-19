@@ -7,6 +7,9 @@ use self::diesel::prelude::*;
 use self::models::*;
 use self::mrp::*;
 
+// Borrowing shortage generation from inventory
+use super::inventory;
+
 use std::io;
 
 pub fn create() {
@@ -102,14 +105,6 @@ pub fn show(show_all: bool) {
   table.printstd();
 }
 
-struct Shortage {
-  pid: i32,
-  pn: String,
-  refdes: String,
-  needed: i32,
-  short: i32,
-}
-
 pub fn complete(build_id: i32) {
   use mrp::schema::*;
 
@@ -126,74 +121,10 @@ pub fn complete(build_id: i32) {
     .load::<PartsPart>(&conn)
     .expect("Error loading parts");
 
-  let mut shortages: Vec<Shortage> = Vec::new();
+  // Get the shortages. Shorts only.
+  let shortages = inventory::get_shortages(false).expect("Unable to get shortages.");
 
-  // Iterate though the results and check inventory
-  for bom_list_entry in &bom_list {
-    // Skip if nostuff is set
-    if bom_list_entry.nostuff == 1 {
-      println!("{} is no stuff.", bom_list_entry.refdes);
-      continue;
-    }
-
-    // Serach for part in inventory. Do calculations as necessary.
-    let mut quantity = 0;
-
-    let inventory_entries = find_inventories_by_part_id(&conn, &bom_list_entry.part_id)
-      .expect("Unable to query for inventory");
-
-    // Calculate the quantity
-    for entry in inventory_entries {
-      quantity += entry.quantity;
-    }
-
-    // This struct has, inventory quantity (+/-), quantity needed, part name
-    let mut found_in_shortage_list = false;
-
-    // Check in shortage list, do some calculations if that item exists
-    for mut entry in &mut shortages {
-      if entry.pid == bom_list_entry.part_id {
-        // Set short to 0 if > 0
-        let mut short = quantity - entry.needed;
-        if short > 0 {
-          short = 0;
-        }
-
-        // Then set the variables
-        entry.needed += build.quantity * bom_list_entry.quantity;
-        entry.short = short;
-        found_in_shortage_list = true;
-        break;
-      }
-    }
-
-    if !found_in_shortage_list {
-      // Get the part for more info
-      let part =
-        find_part_by_id(&conn, &bom_list_entry.part_id).expect("Unable to get part by id.");
-
-      // Calculate the amount short
-      let mut short = quantity - (build.quantity * bom_list_entry.quantity);
-
-      // To 0 if not short
-      if short > 0 {
-        short = 0;
-      }
-
-      // Create shortage item
-      let shortage = Shortage {
-        pid: bom_list_entry.part_id,
-        pn: part.pn,
-        refdes: bom_list_entry.refdes.clone(),
-        needed: build.quantity * bom_list_entry.quantity,
-        short: short,
-      };
-
-      // Add to shortage list
-      shortages.push(shortage);
-    }
-  }
-
+  // Still track if we're short.
   let mut still_short = false;
 
   // Make sure that all parts are not short.
