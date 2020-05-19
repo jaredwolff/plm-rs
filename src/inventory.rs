@@ -18,7 +18,7 @@ use serde::Deserialize;
 struct Record {
   mpn: String,
   quantity: i32,
-  notes: String,
+  notes: Option<String>,
   unit_price: f32,
 }
 
@@ -26,6 +26,7 @@ struct Record {
 struct Shortage {
   pid: i32,
   pn: String,
+  mpn: String,
   desc: String,
   have: i32,
   needed: i32,
@@ -43,11 +44,13 @@ pub fn create_from_file(filename: &String) {
   let mut records: Vec<Record> = Vec::new();
 
   let mut rdr = csv::Reader::from_reader(file);
+
+  // TODO handle empty or malformed content a bit... better.
   for result in rdr.deserialize() {
     // Notice that we need to provide a type hint for automatic
     // deserialization.
     let record: Record = result.expect("Unable to deserialize.");
-    // println!("{:?}", record);
+    println!("Processing: {:?}", record);
     records.push(record);
   }
 
@@ -68,6 +71,11 @@ pub fn create_from_file(filename: &String) {
     // Check if part number exists
     let part = find_part_by_mpn(&conn, &record.mpn).expect("Unable to get part.");
 
+    let notes = match &record.notes {
+      Some(x) => x,
+      None => "",
+    };
+
     // Commits change
     let entry = NewUpdateInventoryEntry {
       part_id: &part.id,
@@ -75,7 +83,7 @@ pub fn create_from_file(filename: &String) {
       unit_price: Some(&record.unit_price),
       quantity: &record.quantity,
       consumed: &0,
-      notes: Some(&record.notes),
+      notes: Some(&notes),
     };
 
     // Finally create the inventory if all look ok!
@@ -265,6 +273,7 @@ pub fn show_shortage() {
         let shortage = Shortage {
           pid: bom_list_entry.part_id,
           pn: part.pn,
+          mpn: part.mpn,
           desc: part.descr,
           have: quantity,
           needed: build.quantity * bom_list_entry.quantity,
@@ -278,12 +287,13 @@ pub fn show_shortage() {
   }
 
   // Print out the shortages in table format.
-  table.add_row(row!["PID", "PN", "Desc", "Have", "Needed", "Short",]);
+  table.add_row(row!["PID", "PN", "MPN", "Desc", "Have", "Needed", "Short",]);
 
   for entry in shortages {
     table.add_row(row![
       entry.pid,
       entry.pn,
+      entry.mpn,
       entry.desc,
       entry.have,
       entry.needed,

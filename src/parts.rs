@@ -2,11 +2,22 @@ extern crate diesel;
 extern crate mrp;
 
 use prettytable::Table;
+use serde::Deserialize;
 
 use self::models::*;
 use self::mrp::*;
 use diesel::prelude::*;
 use std::io;
+
+use std::fs::File;
+use std::io::BufReader;
+
+#[derive(Debug, Deserialize)]
+struct Record {
+  pn: String,
+  mpn: String,
+  desc: String,
+}
 
 pub fn create() {
   // For prompts
@@ -52,6 +63,87 @@ pub fn create() {
     }
   } else {
     create_part(&connection, &part).expect("Unable to create part!");
+  }
+}
+
+pub fn create_by_csv(filename: &String) {
+  // Establish connection!
+  let conn = establish_connection();
+
+  // For prompts
+  let stdio = io::stdin();
+  let input = stdio.lock();
+  let output = io::stdout();
+
+  let mut prompt = prompt::Prompt {
+    reader: input,
+    writer: output,
+  };
+
+  // Open the file
+  let file = File::open(filename).unwrap();
+  let file = BufReader::new(file);
+
+  let mut records: Vec<Record> = Vec::new();
+
+  let mut rdr = csv::Reader::from_reader(file);
+
+  // TODO handle empty or malformed content a bit... better.
+  // TODO: handle invalid data that's not UTF8
+  for result in rdr.deserialize() {
+    // Notice that we need to provide a type hint for automatic
+    // deserialization.
+    let record: Record = result.expect("Unable to deserialize.");
+    println!("Processing: {:?}", record);
+    records.push(record);
+  }
+
+  // Iterate through all the records.
+  for record in records {
+    // Create a new part from the CSV file
+    let part = models::NewUpdatePart {
+      pn: &record.pn,
+      mpn: &record.mpn,
+      descr: &record.desc,
+      ver: &1,
+    };
+
+    let found = find_part_by_pn(&conn, &part.pn);
+
+    // If already found ask if it should be updated
+    if found.is_ok() {
+      let found = found.unwrap();
+
+      // Compare the two make sure they're different
+      if found.mpn != part.mpn || found.descr != part.descr || found.ver != *part.ver {
+        let question = format!("{} already exists! Would you like to update it?", part.pn);
+
+        // Create the table
+        let mut table = Table::new();
+        table.add_row(row![
+          "Current:",
+          found.pn,
+          found.mpn,
+          found.descr,
+          found.ver
+        ]);
+        table.add_row(row!["Change to:", part.pn, part.mpn, part.descr, part.ver]);
+        table.printstd();
+
+        let update = prompt.ask_yes_no_question(&question);
+
+        // Update if they said yes.
+        if update {
+          update_part(&conn, &found.id, &part).expect("Unable to update part!");
+
+          // Check for success
+          println!("{} updated!", part.pn);
+        }
+      }
+    } else {
+      println!("Creating: {:?}", part);
+      create_part(&conn, &part).expect("Unable to create part!");
+    }
   }
 }
 

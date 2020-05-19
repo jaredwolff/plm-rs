@@ -73,7 +73,11 @@ enum PartsSubCommand {
 
 /// Create parts manually
 #[derive(Clap)]
-struct CreateParts {}
+struct CreateParts {
+  /// Create part from a .csv file
+  #[clap(short, long)]
+  filename: Option<String>,
+}
 
 /// Delete parts manually
 #[derive(Clap)]
@@ -195,9 +199,10 @@ fn main() {
       }
     },
     SubCommand::Parts(s) => match s.subcmd {
-      PartsSubCommand::Create(_) => {
-        parts::create();
-      }
+      PartsSubCommand::Create(a) => match a.filename {
+        Some(x) => parts::create_by_csv(&x),
+        None => parts::create(),
+      },
       PartsSubCommand::Delete(_) => {
         parts::delete();
       }

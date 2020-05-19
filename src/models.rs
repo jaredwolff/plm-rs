@@ -2,6 +2,7 @@ use super::schema::*;
 
 use chrono::NaiveDateTime;
 
+// TODO: Add manufacturer information
 #[derive(Identifiable, Queryable)]
 pub struct Part {
     pub id: i32,
@@ -48,6 +49,7 @@ pub struct NewPartsParts<'a> {
     pub part_id: &'a i32,
 }
 
+// TODO: use as unit
 #[derive(Identifiable, Queryable)]
 #[table_name = "inventories"]
 pub struct Inventory {
