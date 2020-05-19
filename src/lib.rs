@@ -211,6 +211,15 @@ pub fn find_build_by_id(
     .first(conn)
 }
 
+pub fn delete_build(
+  conn: &SqliteConnection,
+  id: &i32,
+) -> std::result::Result<usize, diesel::result::Error> {
+  use schema::builds;
+
+  diesel::delete(builds::dsl::builds.filter(builds::dsl::id.eq(id))).execute(conn)
+}
+
 // Inventory related
 
 pub fn create_inventory(

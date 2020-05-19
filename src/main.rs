@@ -105,7 +105,10 @@ struct CreateBuild {}
 
 /// Delete build manually
 #[derive(Clap)]
-struct DeleteBuild {}
+struct DeleteBuild {
+  /// ID for the build. Get an id from builds show
+  build_id: i32,
+}
 
 /// Show all builds
 #[derive(Clap)]
@@ -119,7 +122,6 @@ struct ShowBuilds {
 #[derive(Clap)]
 struct CompleteBuild {
   /// ID for the build. Get an id from builds show
-  #[clap(short, long)]
   build_id: i32,
 }
 
@@ -191,8 +193,9 @@ fn main() {
       BuildSubCommand::Create(_) => {
         builds::create();
       }
-      BuildSubCommand::Delete(_) => {
-        println!("delete!");
+      // TODO: take the next argument after delete instead of needing a flag...
+      BuildSubCommand::Delete(a) => {
+        builds::delete(a.build_id);
       }
       BuildSubCommand::Show(a) => {
         builds::show(a.all);

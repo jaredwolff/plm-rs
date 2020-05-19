@@ -105,6 +105,15 @@ pub fn show(show_all: bool) {
   table.printstd();
 }
 
+pub fn delete(build_id: i32) {
+  // Establish connection!
+  let conn = establish_connection();
+
+  delete_build(&conn, &build_id).expect("Unable to delete build.");
+
+  println!("Deleted build id: {} successfully!", build_id);
+}
+
 pub fn complete(build_id: i32) {
   use mrp::schema::*;
 
