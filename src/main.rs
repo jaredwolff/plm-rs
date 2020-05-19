@@ -138,16 +138,21 @@ struct Inventory {
 #[clap(version = crate_version!())]
 enum InventorySubCommand {
   Create(CreateInventory),
+  Import(ImportInventory),
   Delete(DeleteInventory),
   Show(ShowInventory),
 }
 
-/// Create inventory manually or by importing .csv
+/// Create inventory manually
 #[derive(Clap)]
-struct CreateInventory {
-  /// Create inventory from a optional .csv file
+struct CreateInventory {}
+
+/// Import inventory via .csv
+#[derive(Clap)]
+struct ImportInventory {
+  /// Inventory from a .csv file
   #[clap(short, long)]
-  filename: Option<String>,
+  filename: String,
 }
 
 /// Delete inventory manually
@@ -181,11 +186,11 @@ fn main() {
       }
     },
     SubCommand::Inventory(s) => match s.subcmd {
-      InventorySubCommand::Create(a) => {
-        match a.filename {
-          Some(x) => inventory::create_from_file(&x),
-          None => inventory::create(),
-        };
+      InventorySubCommand::Create(_) => {
+        inventory::create();
+      }
+      InventorySubCommand::Import(a) => {
+        inventory::create_from_file(&a.filename);
       }
       InventorySubCommand::Delete(_) => {
         println!("delete!");

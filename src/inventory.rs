@@ -19,7 +19,7 @@ struct Record {
   mpn: String,
   quantity: i32,
   notes: Option<String>,
-  unit_price: f32,
+  unit_price: Option<f32>,
 }
 
 #[derive(Debug)]
@@ -76,11 +76,13 @@ pub fn create_from_file(filename: &String) {
       None => "",
     };
 
+    let price = record.unit_price.unwrap_or(0.0);
+
     // Commits change
     let entry = NewUpdateInventoryEntry {
       part_id: &part.id,
       part_ver: &part.ver,
-      unit_price: Some(&record.unit_price),
+      unit_price: Some(&price),
       quantity: &record.quantity,
       consumed: &0,
       notes: Some(&notes),
