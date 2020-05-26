@@ -18,8 +18,8 @@ use serde::{Deserialize, Serialize};
 struct Record {
   mpn: String,
   quantity: i32,
-  notes: Option<String>,
-  unit_price: Option<f32>,
+  notes: String,
+  unit_price: f32,
 }
 
 #[derive(Debug, Serialize)]
@@ -74,21 +74,14 @@ pub fn create_from_file(filename: &String) {
     // Check if part number exists
     let part = find_part_by_mpn(&conn, &record.mpn).expect("Unable to get part.");
 
-    let notes = match &record.notes {
-      Some(x) => x,
-      None => "",
-    };
-
-    let price = record.unit_price.unwrap_or(0.0);
-
     // Commits change
     let entry = NewUpdateInventoryEntry {
       part_id: &part.id,
       part_ver: &part.ver,
-      unit_price: Some(&price),
+      unit_price: Some(&record.unit_price),
       quantity: &record.quantity,
       consumed: &0,
-      notes: Some(&notes),
+      notes: Some(&record.notes),
     };
 
     // Finally create the inventory if all look ok!
@@ -111,7 +104,7 @@ pub fn create() {
   };
 
   // Prompts for a part number
-  let part_number = prompt.ask_text_entry("Enter part number:");
+  let part_number = prompt.ask_text_entry("Enter part number: ");
 
   // Establish connection!
   let conn = establish_connection();
@@ -123,21 +116,26 @@ pub fn create() {
   let part = match part {
     Ok(x) => x,
     Err(_) => {
-      // println!("Unable to find {}", part_number);
+      println!("Unable to find {}", part_number);
       std::process::exit(1);
     }
   };
 
   // Then an ajustment value
-  let adj = prompt.ask_text_entry("Enter adjustment value:");
+  let adj = prompt.ask_text_entry("Enter adjustment value: ");
   let adj: i32 = adj.trim().parse().expect("Invalid adjustment!");
 
+  // Unit price
+  let price = prompt.ask_text_entry("Enter unit price: ");
+  let price: f32 = price.trim().parse().expect("Invalid price!");
+
   // Then any notes.
-  let notes = prompt.ask_text_entry("Enter notes:");
+  let notes = prompt.ask_text_entry("Enter notes: ");
 
   println!("Part number: {}", part.pn);
   println!("Ajustment: {}", adj);
-  // println!("Notes: {}", notes);
+  println!("Price: ${}", price);
+  println!("Notes: {}", notes);
   let proceed = prompt.ask_yes_no_question("Look ok?");
 
   // Confirm change (y/n)
@@ -146,7 +144,7 @@ pub fn create() {
     let entry = NewUpdateInventoryEntry {
       part_id: &part.id,
       part_ver: &part.ver,
-      unit_price: Some(&0.0),
+      unit_price: Some(&price),
       quantity: &adj,
       consumed: &0,
       notes: Some(&notes),

@@ -51,7 +51,7 @@ struct ShowBom {
   part_number: String,
   /// Version of the part in question
   #[clap(short, long)]
-  version: i32,
+  version: Option<i32>,
 }
 
 /// A subcommand for adding/modifying/removing parts
@@ -246,6 +246,8 @@ fn main() {
         bom::import(&a.filename);
       }
       BomSubCommand::Show(a) => {
+        // Note: version is borrowed as an Option
+        // not required for this command to work
         bom::show(&a.part_number, &a.version);
       }
     },

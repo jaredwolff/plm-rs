@@ -409,7 +409,7 @@ pub fn import(filename: &String) {
   table.printstd();
 }
 
-pub fn show(part_number: &String, version: &i32) {
+pub fn show(part_number: &String, version: &Option<i32>) {
   use mrp::schema::*;
 
   // Establish connection
@@ -419,27 +419,26 @@ pub fn show(part_number: &String, version: &i32) {
   let part = find_part_by_pn(&connection, &part_number);
 
   if part.is_err() {
-    println!("{} version {} was not found!", part_number, version);
+    println!("{} was not found!", part_number);
     std::process::exit(1);
   }
 
   // Transform the response into a Part
   let part = part.unwrap();
 
-  if part.ver != *version {
-    println!(
-      "{} version {} was not found! Latest is: {}",
-      part_number, version, part.ver
-    );
-    std::process::exit(1);
-  }
-
   // Create the table
   let mut table = Table::new();
 
+  // Then either use the provided version or the latest
+  let ver = match version {
+    Some(x) => x,
+    None => &part.ver,
+  };
+
+  // Get all the parts related to this BOM
   let results = parts_parts::dsl::parts_parts
     .filter(parts_parts::dsl::bom_part_id.eq(part.id))
-    .filter(parts_parts::dsl::bom_ver.eq(version))
+    .filter(parts_parts::dsl::bom_ver.eq(ver))
     .load::<models::PartsPart>(&connection)
     .expect("Error loading parts");
 
