@@ -147,7 +147,7 @@ pub fn import(filename: &String) {
     // TODO: a more comprehensive list or better way of filtering these..
     let check = [
       "GND", "FIDUCIAL", "MOUNTING", "FRAME", "+3V3", "TP", "VCC", "VBUS", "V5V0", "DOCFIELD",
-      "VBAT", "VSYS",
+      "VBAT", "VSYS", "PAD",
     ];
 
     for entry in check.iter() {
@@ -235,7 +235,7 @@ pub fn import(filename: &String) {
   ]);
 
   // Get MPN, DigikeyPn from Library exerpts
-  for item in &list {
+  for mut item in list {
     // Temporary struct creation..
     #[derive(Debug)]
     struct Part {
@@ -255,6 +255,13 @@ pub fn import(filename: &String) {
       mqty: 1,
     };
 
+    // If alias
+    let mut is_alias = false;
+
+    // Quantity local
+    let mut mqty_temp: i32 = 1;
+
+    // See if we're found
     let mut found;
 
     for library in &eagle.drawing.schematic.libraries.library {
@@ -283,6 +290,11 @@ pub fn import(filename: &String) {
 
                 // Get the attributes we care about.
                 for attribute in attributes {
+                  // Blank value check
+                  if attribute.value == "" {
+                    continue;
+                  }
+
                   if attribute.name == "MPN" {
                     part.mpn = attribute.value.clone();
                   } else if attribute.name == "DIGIKEYPN" {
@@ -290,14 +302,34 @@ pub fn import(filename: &String) {
                   } else if attribute.name == "DESC" {
                     part.descr = attribute.value.clone();
                   } else if attribute.name == "MQTY" {
-                    println!("found mqty {}", attribute.value);
                     // Convert to int
-                    let mqty_temp: i32 = attribute
+                    mqty_temp = attribute
                       .value
                       .trim()
                       .parse()
                       .expect("Unable to convert mqty");
-                    part.mqty = mqty_temp;
+                  } else if attribute.name == "ALIAS" {
+                    // Set flag
+                    is_alias = true;
+
+                    // Get the part that this is aliasing..
+                    let alias = find_part_by_pn(&conn, &attribute.value);
+
+                    // Sort it out
+                    let alias = match alias {
+                      Ok(x) => x,
+                      Err(_) => {
+                        println!("Unable to find alias {}!", attribute.value);
+                        std::process::exit(1);
+                      }
+                    };
+
+                    // Clone these bits so the live on
+                    part.pn = alias.pn.clone();
+                    part.mpn = alias.mpn.clone();
+                    part.descr = alias.descr.clone();
+                    part.ver = alias.ver;
+                    part.mqty = alias.mqty;
                   }
                 }
               }
@@ -310,6 +342,14 @@ pub fn import(filename: &String) {
           }
         }
       }
+    }
+
+    // Set the quantity if it's *not* an alias
+    if !is_alias {
+      part.mqty = mqty_temp;
+    } else {
+      // If it is an alias, update mqty
+      item.quantity = mqty_temp;
     }
 
     // Add to table view
@@ -446,7 +486,7 @@ pub fn show(part_number: &String, version: &Option<i32>) {
 
   println!(
     "Part Number: {} BOM Id: {} Version: {}",
-    part.pn, part.id, part.ver
+    part.pn, part.id, ver
   );
 
   table.add_row(row![

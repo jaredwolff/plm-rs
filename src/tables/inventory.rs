@@ -287,7 +287,7 @@ pub fn get_shortages(
       }
 
       // Serach for part in inventory. Do calculations as necessary.
-      let mut quantity = 0;
+      let mut inventory_quantity = 0;
 
       // Get the inventory entries
       let inventory_entries = find_inventories_by_part_id(&connection, &bom_list_entry.part_id);
@@ -300,7 +300,7 @@ pub fn get_shortages(
 
       // Calculate the quantity
       for entry in inventory_entries {
-        quantity += entry.quantity;
+        inventory_quantity += entry.quantity;
       }
 
       // This struct has, inventory quantity (+/-), quantity needed, part name
@@ -309,8 +309,10 @@ pub fn get_shortages(
       // Check in shortage list, do some calculations if that item exists
       for mut entry in &mut shortages {
         if entry.pid == bom_list_entry.part_id {
+          // Calculate shortage based on known need plus new quantity
+          let mut short = entry.needed + bom_list_entry.quantity - inventory_quantity;
+
           // Set short to 0 if > 0
-          let mut short = entry.needed - quantity;
           if short < 0 {
             short = 0;
           }
@@ -333,7 +335,7 @@ pub fn get_shortages(
         };
 
         // Calculate the amount short
-        let mut short = (build.quantity * bom_list_entry.quantity) - quantity;
+        let mut short = (build.quantity * bom_list_entry.quantity) - inventory_quantity;
 
         // To 0 if not short
         if short < 0 {
@@ -347,7 +349,7 @@ pub fn get_shortages(
           mpn: part.mpn,
           desc: part.descr,
           refdes: bom_list_entry.refdes.clone(),
-          have: quantity,
+          have: inventory_quantity,
           needed: build.quantity * bom_list_entry.quantity,
           short: short,
         };
