@@ -5,6 +5,7 @@ This project utilizes the built-in capabilities of Eagle to store part data. Use
 capture your bill of materials. Use it to track inventories. Use it to create builds and
 consume inventory accordingly! It's not meant to replace PLM (Product Lifecycle Management) systems
 like [Aligni](https://www.aligni.com) but rather supplement product makers who may not be able to pay for it.
+(By the way, [Aligni](https://www.aligni.com) is *free* for open source projects!)
 
 ## Functionality
 
