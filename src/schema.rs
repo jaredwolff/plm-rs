@@ -1,3 +1,5 @@
+use diesel::table;
+
 table! {
     builds (id) {
         id -> Integer,

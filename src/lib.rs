@@ -1,20 +1,22 @@
 #[macro_use]
 extern crate diesel;
-extern crate dotenv;
-
 #[macro_use]
 extern crate diesel_migrations;
+
+#[macro_use]
+extern crate prettytable;
 
 pub mod models;
 pub mod prompt;
 pub mod schema;
 pub mod schematic;
+pub mod tables;
 
 use diesel::prelude::*;
 use dotenv::dotenv;
 use std::env;
 
-use self::models::*;
+use models::*;
 
 // Migrate
 embed_migrations!();

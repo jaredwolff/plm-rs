@@ -1,11 +1,9 @@
 extern crate diesel;
-extern crate mrp;
 
 use prettytable::Table;
 
 use self::diesel::prelude::*;
-use self::models::*;
-use self::mrp::*;
+use crate::{models::*, *};
 
 // Borrowing shortage generation from inventory
 use super::inventory;
@@ -67,7 +65,7 @@ pub fn create() {
 }
 
 pub fn show(show_all: bool) {
-    use mrp::schema::*;
+    use crate::schema::*;
 
     // Create the table
     let mut table = Table::new();
@@ -115,7 +113,7 @@ pub fn delete(build_id: i32) {
 }
 
 pub fn complete(build_id: i32) {
-    use mrp::schema::*;
+    use crate::schema::*;
 
     // Establish connection!
     let conn = establish_connection();

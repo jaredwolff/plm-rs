@@ -1,11 +1,9 @@
 extern crate diesel;
-extern crate mrp;
 
-use prettytable::Table;
+use prettytable::{row, Table};
 use serde::Deserialize;
 
-use self::models::*;
-use self::mrp::*;
+use crate::{models::*, *};
 use diesel::prelude::*;
 use std::io;
 
@@ -205,7 +203,7 @@ pub fn delete() {
 }
 
 pub fn show() {
-    use mrp::schema::*;
+    use crate::schema::*;
 
     // Create the table
     let mut table = Table::new();

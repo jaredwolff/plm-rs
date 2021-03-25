@@ -7,6 +7,8 @@ All notable changes to this project will be documented in this file. This file a
 ### Changed:
 
 * Updating Cargo dependencies
+* Updated binary name to 'eagle-plm' to match the repo
+* Moved main to bin folder
 
 ### Removed:
 * Removed flags for filename entry and part_number entry (as they're default and required every time)
@@ -16,3 +18,5 @@ All notable changes to this project will be documented in this file. This file a
 * Changelog!
 * Added export shortages function
 * Added export shortages command
+* Added update_from_file in inventory
+* Added inventory update command

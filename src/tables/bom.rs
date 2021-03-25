@@ -1,13 +1,12 @@
 extern crate diesel;
-extern crate mrp;
 extern crate quick_xml;
 extern crate serde;
 
+use crate::*;
 use prettytable::Table;
 use quick_xml::de::from_reader;
 
 use self::diesel::prelude::*;
-use self::mrp::*;
 
 use std::env;
 
@@ -23,7 +22,7 @@ struct LineItem {
 }
 
 pub fn import(filename: &String) {
-    use mrp::schema::parts::dsl::*;
+    use crate::schema::parts::dsl::*;
 
     // For prompts
     let stdio = io::stdin();
@@ -453,7 +452,7 @@ pub fn import(filename: &String) {
 }
 
 pub fn show(part_number: &String, version: &Option<i32>) {
-    use mrp::schema::*;
+    use crate::schema::*;
 
     // Establish connection
     let connection = establish_connection();

@@ -1,21 +1,21 @@
 extern crate diesel;
-extern crate mrp;
 
+use crate::{models::*, *};
 use prettytable::Table;
 
-use self::diesel::prelude::*;
-use self::models::*;
-use self::mrp::*;
+use anyhow::anyhow;
 
-use std::fs::File;
+use self::diesel::prelude::*;
+
 use std::io::{BufReader, BufWriter};
+use std::{fmt::Debug, fs::File};
 
 use std::io;
 
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
-struct Record {
+struct NewInventoryRecord {
     mpn: String,
     quantity: i32,
     notes: String,
@@ -46,28 +46,88 @@ pub struct Shortage {
     pub short: i32,
 }
 
-// TODO: modify inventory entry manually by pn
-
-pub fn create_from_file(filename: &String) {
-    // Establish connection!
-    let conn = establish_connection();
-
+/// Reads records from file using a generic type. Useful across create and update calls
+fn read_records<T>(filename: &String) -> anyhow::Result<Vec<T>>
+where
+    T: DeserializeOwned + Debug,
+{
     // Open the file
     let file = File::open(filename).unwrap();
     let file = BufReader::new(file);
 
-    let mut records: Vec<Record> = Vec::new();
+    let mut records: Vec<T> = Vec::new();
 
     let mut rdr = csv::Reader::from_reader(file);
 
-    // TODO handle empty or malformed content a bit... better.
-    for result in rdr.deserialize() {
+    // Process each line entry.
+    for (pos, result) in rdr.deserialize().enumerate() {
         // Notice that we need to provide a type hint for automatic
         // deserialization.
-        let record: Record = result.expect("Unable to deserialize.");
+        let record: T = match result {
+            Ok(r) => r,
+            Err(e) => return Err(anyhow!("Unable to process line {}. Error: {}", pos, e)),
+        };
+
         println!("Processing: {:?}", record);
         records.push(record);
     }
+
+    Ok(records)
+}
+
+// Update from inventory export file
+pub fn update_from_file(filename: &String) {
+    // Open DB connection
+    let conn = establish_connection();
+
+    // Get records from file
+    let records: Vec<InventoryEntry> = match read_records(filename) {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("{}\nNo changes have been made", e);
+            return;
+        }
+    };
+
+    // Only updates records found!
+    for record in &records {
+        // Notes converted as necessary
+        let notes = match &record.notes {
+            Some(n) => Some(n.as_str()),
+            None => None,
+        };
+
+        // Convert from InventoryRecord to NewUpdateInventoryEntry
+        let update = NewUpdateInventoryEntry {
+            quantity: &record.quantity,
+            consumed: &record.consumed,
+            unit_price: record.unit_price.as_ref(),
+            notes: notes,
+            part_ver: &record.part_ver,
+            part_id: &record.part_id,
+        };
+
+        // Then update the entry as needed
+        if let Err(e) = update_inventory_by_id(&conn, &record.id, &update) {
+            eprintln!("Error updating inventory id: {}. Error: {}", record.id, e);
+        } else {
+            println!("Updated: {}", record.mpn);
+        }
+    }
+}
+
+pub fn create_from_file(filename: &String) {
+    // Open DB connection
+    let conn = establish_connection();
+
+    // Get records from file
+    let records: Vec<NewInventoryRecord> = match read_records(filename) {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("{}\nNo changes have been made", e);
+            return;
+        }
+    };
 
     for record in &records {
         // Check if part number exists
@@ -167,7 +227,7 @@ pub fn create() {
 }
 
 pub fn show() {
-    use mrp::schema::inventories::dsl::*;
+    use crate::schema::inventories::dsl::*;
 
     // Create the table
     let mut table = Table::new();
@@ -243,7 +303,7 @@ pub fn export_to_file(filename: &String) {
     // Establish connection!
     let conn = establish_connection();
 
-    use mrp::schema::*;
+    use crate::schema::*;
 
     // Run the query
     let inventory = inventories::dsl::inventories
@@ -305,7 +365,7 @@ pub fn export_shortages_to_file(filename: &String) {
 pub fn get_shortages(
     show_all_entries: bool,
 ) -> std::result::Result<Vec<Shortage>, diesel::result::Error> {
-    use mrp::schema::*;
+    use crate::schema::*;
 
     let connection = establish_connection();
     let results = builds::dsl::builds

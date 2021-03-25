@@ -83,7 +83,7 @@ If you have parts distributed across many libraries, this solution will not work
 * [x] Create a build based on a BOM
 * [x] Check shortages based on inventory
 * [x] Add inventory from CSV
-* [ ] Update inventory from CSV
+* [x] Update inventory from CSV
 * [ ] Update a exiting inventory item
 * [x] Complete a build and consume inventory
 * [x] Unified binary
@@ -100,6 +100,8 @@ If you have parts distributed across many libraries, this solution will not work
 * [x] Exporting shortage list to CSV for easy purchases
 * [ ] Integration of Digikeypn
 * [ ] Documentation
+* [ ] Migration built in
+  * [ ] Prompts user to allow migration on startup on new version
 
 ## Handy URLS
 

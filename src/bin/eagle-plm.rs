@@ -1,10 +1,6 @@
-#[macro_use]
-extern crate prettytable;
-
-mod tables;
-use tables::*;
-
 use clap::{crate_version, Clap};
+
+use eagle_plm::tables::*;
 
 #[derive(Clap)]
 #[clap(version = crate_version!())]
@@ -143,6 +139,7 @@ struct Inventory {
 enum InventorySubCommand {
     Create(CreateInventory),
     Import(ImportInventory),
+    Update(UpdateInventory),
     Export(ExportInventory),
     Shortages(ExportInventoryShortages),
     Delete(DeleteInventory),
@@ -156,6 +153,13 @@ struct CreateInventory {}
 /// Import inventory via .csv
 #[derive(Clap)]
 struct ImportInventory {
+    /// Inventory from a .csv file
+    filename: String,
+}
+
+/// Import inventory via .csv
+#[derive(Clap)]
+struct UpdateInventory {
     /// Inventory from a .csv file
     filename: String,
 }
@@ -189,7 +193,6 @@ struct ShowInventory {
     all_entries: bool,
 }
 
-// TODO: maybe reverse the arguments so that it's more of an action show inventory vs inventory show
 fn main() {
     let opts: Opts = Opts::parse();
 
@@ -215,6 +218,9 @@ fn main() {
             }
             InventorySubCommand::Import(a) => {
                 inventory::create_from_file(&a.filename);
+            }
+            InventorySubCommand::Update(a) => {
+                inventory::update_from_file(&a.filename);
             }
             InventorySubCommand::Export(a) => {
                 inventory::export_to_file(&a.filename);
