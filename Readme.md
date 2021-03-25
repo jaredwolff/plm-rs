@@ -84,9 +84,21 @@ If you have parts distributed across many libraries, this solution will not work
 * [x] Check shortages based on inventory
 * [x] Add inventory from CSV
 * [ ] Update inventory from CSV
+* [ ] Update a exiting inventory item
 * [x] Complete a build and consume inventory
 * [x] Unified binary
+* [x] Import inventory fails without unit_price column and notes column
+* [x] Creating inventory includes price
+* [x] Updating BOM version makes the old one inaccessible
+* [x] Create the idea of a part "alias". Whereas a part is simply an alias of another part. Could be multiple quantities too with MQTY.
+* [ ] Delete a version of a bom
+* [ ] Alternates +
 * [ ] Part substitutions
+* [ ] Searching for parts
+* [ ] Importing purchase (shortage check only)
+* [x] `bom show` without `-v` shows latest
+* [x] Exporting shortage list to CSV for easy purchases
+* [ ] Integration of Digikeypn
 * [ ] Documentation
 
 ## Handy URLS
