@@ -59,9 +59,4 @@ table! {
 joinable!(builds -> parts (part_id));
 joinable!(inventories -> parts (part_id));
 
-allow_tables_to_appear_in_same_query!(
-    builds,
-    inventories,
-    parts,
-    parts_parts,
-);
+allow_tables_to_appear_in_same_query!(builds, inventories, parts, parts_parts,);
