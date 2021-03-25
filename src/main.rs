@@ -47,7 +47,6 @@ struct ImportBom {
 #[derive(Clap)]
 struct ShowBom {
   /// Part number of the Bom in question
-  #[clap(short, long)]
   part_number: String,
   /// Version of the part in question
   #[clap(short, long)]
@@ -145,6 +144,7 @@ enum InventorySubCommand {
   Create(CreateInventory),
   Import(ImportInventory),
   Export(ExportInventory),
+  Shortages(ExportInventoryShortages),
   Delete(DeleteInventory),
   Show(ShowInventory),
 }
@@ -157,7 +157,6 @@ struct CreateInventory {}
 #[derive(Clap)]
 struct ImportInventory {
   /// Inventory from a .csv file
-  #[clap(short, long)]
   filename: String,
 }
 
@@ -165,7 +164,13 @@ struct ImportInventory {
 #[derive(Clap)]
 struct ExportInventory {
   /// Inventory to a .csv file
-  #[clap(short, long)]
+  filename: String,
+}
+
+/// Export inventory and shortages via .csv
+#[derive(Clap)]
+struct ExportInventoryShortages {
+  /// Inventory to a .csv file
   filename: String,
 }
 
@@ -213,6 +218,9 @@ fn main() {
       }
       InventorySubCommand::Export(a) => {
         inventory::export_to_file(&a.filename);
+      }
+      InventorySubCommand::Shortages(a) => {
+        inventory::export_shortages_to_file(&a.filename);
       }
       InventorySubCommand::Delete(_) => {
         println!("delete!");

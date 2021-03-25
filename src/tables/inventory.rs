@@ -22,6 +22,18 @@ struct Record {
   unit_price: f32,
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+pub struct InventoryEntry {
+  pub id: i32,
+  pub mpn: String,
+  pub quantity: i32,
+  pub consumed: i32,
+  pub unit_price: Option<f32>,
+  pub notes: Option<String>,
+  pub part_ver: i32,
+  pub part_id: i32,
+}
+
 #[derive(Debug, Serialize)]
 pub struct Shortage {
   pub pid: i32,
@@ -226,8 +238,54 @@ pub fn show_shortage(show_all_entries: bool) {
   table.printstd();
 }
 
-// Export shortages to csv
+// Export inventory to csv
 pub fn export_to_file(filename: &String) {
+  // Establish connection!
+  let conn = establish_connection();
+
+  use mrp::schema::*;
+
+  // Run the query
+  let inventory = inventories::dsl::inventories
+    .load::<Inventory>(&conn)
+    .expect("Uanble to load inventory list.");
+
+  // File operations
+  let file = File::create(filename).unwrap();
+  let file = BufWriter::new(file);
+
+  // Create CSV writer
+  let mut wtr = csv::Writer::from_writer(file);
+
+  // Iterate and add to csv
+  for entry in inventory {
+    // Grabs the part information
+
+    let part = find_part_by_id(&conn,&entry.part_id).unwrap();
+
+    // Create a new entry
+    let inventory_entry = InventoryEntry {
+      id: entry.id,
+      mpn: part.mpn,
+      quantity: entry.quantity,
+      consumed: entry.consumed,
+      unit_price: entry.unit_price,
+      notes: entry.notes,
+      part_ver: entry.part_ver,
+      part_id: entry.part_id,
+    };
+
+    wtr
+      .serialize(inventory_entry)
+      .expect("Unable to serialize.");
+    wtr.flush().expect("Unable to flush");
+  }
+
+  println!("Inventory list exported to {}", filename);
+}
+
+// Export shortages to csv
+pub fn export_shortages_to_file(filename: &String) {
   let shortages = get_shortages(false).expect("Unable to get shortage report.");
 
   let file = File::create(filename).unwrap();
