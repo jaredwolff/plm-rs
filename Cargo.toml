@@ -4,15 +4,13 @@ version = "0.1.2"
 authors = ["Jared Wolff <hello@jaredwolff.com>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-diesel = { version = "^1.4.4", features = ["sqlite", "chrono"] }
-diesel_migrations = "^1.4.0"
-csv = "^1"
-dotenv = "0.9.0"
-chrono = "0.4.11"
-prettytable-rs = "^0.8"
-quick-xml = { version = "^0.18.1", features = [ "serialize" ] }
-serde = { version = "^1.0", features = [ "derive" ] }
-clap = "~3.0.0-beta.1"
+diesel = { version = "1.4", features = ["sqlite", "chrono"] }
+diesel_migrations = "1.4"
+csv = "1"
+dotenv = "0.15"
+chrono = "0.4"
+prettytable-rs = "0.8"
+quick-xml = { version = "0.22", features = ["serialize"] }
+serde = { version = "1.0", features = ["derive"] }
+clap = "~3.0.0-beta.2"
