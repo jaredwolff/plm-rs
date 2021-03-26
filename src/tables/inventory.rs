@@ -17,9 +17,9 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 #[derive(Debug, Deserialize)]
 struct NewInventoryRecord {
     mpn: String,
-    quantity: i32,
-    notes: String,
-    unit_price: f32,
+    quantity: Option<i32>,
+    notes: Option<String>,
+    unit_price: Option<f32>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -40,10 +40,12 @@ pub struct Shortage {
     pub pn: String,
     pub mpn: String,
     pub desc: String,
-    pub refdes: String,
     pub have: i32,
     pub needed: i32,
     pub short: i32,
+    pub quantity: Option<i32>,
+    pub notes: Option<String>,
+    pub unit_price: Option<f32>,
 }
 
 /// Reads records from file using a generic type. Useful across create and update calls
@@ -143,6 +145,18 @@ pub fn create_from_file(filename: &String) {
 
     // Re iterate now that we know the parts are all valid
     for record in &records {
+        // We need at least a quantity to add a new record
+        let quantity = match record.quantity {
+            Some(q) => q,
+            None => continue,
+        };
+
+        // Get the notes
+        let notes = match &record.notes {
+            Some(n) => Some(n.as_str()),
+            None => None,
+        };
+
         // Check if part number exists
         let part = find_part_by_mpn(&conn, &record.mpn).expect("Unable to get part.");
 
@@ -150,10 +164,10 @@ pub fn create_from_file(filename: &String) {
         let entry = NewUpdateInventoryEntry {
             part_id: &part.id,
             part_ver: &part.ver,
-            unit_price: Some(&record.unit_price),
-            quantity: &record.quantity,
+            unit_price: record.unit_price.as_ref(),
+            quantity: &quantity,
             consumed: &0,
-            notes: Some(&record.notes),
+            notes: notes,
         };
 
         // Finally create the inventory if all look ok!
@@ -481,10 +495,12 @@ pub fn get_shortages(
                     pn: part.pn,
                     mpn: part.mpn,
                     desc: part.descr,
-                    refdes: bom_list_entry.refdes.clone(),
                     have: inventory_quantity,
                     needed: build.quantity * bom_list_entry.quantity,
                     short: short,
+                    unit_price: None,
+                    notes: None,
+                    quantity: None,
                 };
 
                 // Add to shortage list

@@ -146,7 +146,7 @@ pub fn import(filename: &String) {
         // TODO: a more comprehensive list or better way of filtering these..
         let check = [
             "GND", "FIDUCIAL", "MOUNTING", "FRAME", "+3V3", "TP", "VCC", "VBUS", "V5V0",
-            "DOCFIELD", "VBAT", "VSYS", "PAD",
+            "DOCFIELD", "VBAT", "VSYS", "PAD", "VDC",
         ];
 
         for entry in check.iter() {

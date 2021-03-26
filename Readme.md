@@ -103,6 +103,7 @@ If you have parts distributed across many libraries, this solution will not work
 * [ ] Migration built in
   * [ ] Prompts user to allow migration on startup on new version
 * [ ] Tracking inventory change history
+* [ ] Central config and database location 
 
 ## Handy URLS
 

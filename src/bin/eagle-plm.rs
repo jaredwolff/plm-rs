@@ -35,7 +35,7 @@ enum BomSubCommand {
 /// A subcommand for importing a bom from an Eagle .sch file
 #[derive(Clap)]
 struct ImportBom {
-    #[clap(short, long)]
+    /// Path of .sch file to be imported
     filename: String,
 }
 

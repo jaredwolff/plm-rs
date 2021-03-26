@@ -137,10 +137,7 @@ pub fn complete(build_id: i32) {
     // Make sure that all parts are not short.
     for entry in shortages {
         if entry.short != 0 {
-            println!(
-                "Still short {} for part: {} ({})",
-                entry.needed, entry.pn, entry.refdes
-            );
+            println!("Still short {} for part: {}", entry.needed, entry.pn,);
             if still_short == false {
                 still_short = true;
             }
