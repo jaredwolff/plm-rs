@@ -167,6 +167,9 @@ struct UpdateInventory {
 /// Export inventory and shortages via .csv
 #[derive(Clap)]
 struct ExportInventory {
+    /// Flag to export all inventory (event 0 qty entries)
+    #[clap(short, long)]
+    export_all: bool,
     /// Inventory to a .csv file
     filename: String,
 }
@@ -223,19 +226,19 @@ fn main() {
                 inventory::update_from_file(&a.filename);
             }
             InventorySubCommand::Export(a) => {
-                inventory::export_to_file(&a.filename);
+                inventory::export_to_file(&a.filename, a.export_all);
             }
             InventorySubCommand::Shortages(a) => {
                 inventory::export_shortages_to_file(&a.filename);
             }
             InventorySubCommand::Delete(_) => {
-                println!("delete!");
+                println!("Not implemented!");
             }
             InventorySubCommand::Show(a) => {
                 if a.show_shortage {
                     inventory::show_shortage(a.all_entries);
                 } else {
-                    inventory::show();
+                    inventory::show(a.all_entries);
                 }
             }
         },

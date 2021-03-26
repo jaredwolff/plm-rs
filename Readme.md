@@ -102,6 +102,7 @@ If you have parts distributed across many libraries, this solution will not work
 * [ ] Documentation
 * [ ] Migration built in
   * [ ] Prompts user to allow migration on startup on new version
+* [ ] Tracking inventory change history
 
 ## Handy URLS
 

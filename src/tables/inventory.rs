@@ -226,7 +226,7 @@ pub fn create() {
     }
 }
 
-pub fn show() {
+pub fn show(show_all_entries: bool) {
     use crate::schema::inventories::dsl::*;
 
     // Create the table
@@ -237,7 +237,6 @@ pub fn show() {
         .load::<Inventory>(&connection)
         .expect("Error loading parts");
 
-    println!("Displaying {} parts", results.len());
     table.add_row(row![
         "PN",
         "Desc",
@@ -248,6 +247,11 @@ pub fn show() {
         "Ver"
     ]);
     for inventory in results {
+        // Check if show_all_entries
+        if !show_all_entries && inventory.quantity == 0 {
+            continue;
+        }
+
         // Check if part number exists
         let part = find_part_by_id(&connection, &inventory.part_id).expect("Unable to get part.");
 
@@ -261,7 +265,14 @@ pub fn show() {
             inventory.part_ver
         ]);
     }
-    table.printstd();
+
+    // Change output depending on how many parts (or lack thereof)
+    if table.len() == 1 {
+        println!("No inventory to display.");
+    } else {
+        println!("Displaying {} parts", table.len() - 1);
+        table.printstd();
+    }
 }
 
 // TODO: show shortage by build ID
@@ -299,7 +310,7 @@ pub fn show_shortage(show_all_entries: bool) {
 }
 
 // Export inventory to csv
-pub fn export_to_file(filename: &String) {
+pub fn export_to_file(filename: &String, export_all: bool) {
     // Establish connection!
     let conn = establish_connection();
 
@@ -319,8 +330,12 @@ pub fn export_to_file(filename: &String) {
 
     // Iterate and add to csv
     for entry in inventory {
-        // Grabs the part information
+        // Skips this part if qty = 0 if export_all is false
+        if !export_all && entry.quantity == 0 {
+            continue;
+        }
 
+        // Grabs the part information
         let part = find_part_by_id(&conn, &entry.part_id).unwrap();
 
         // Create a new entry

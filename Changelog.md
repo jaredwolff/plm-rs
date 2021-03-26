@@ -20,3 +20,5 @@ All notable changes to this project will be documented in this file. This file a
 * Added export shortages command
 * Added update_from_file in inventory
 * Added inventory update command
+* Added option to export_all for export_to_file. Now, by default, only exports quantity > 0
+* Inventory show only shows parts with quantity > 0
