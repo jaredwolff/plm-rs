@@ -6,6 +6,7 @@ extern crate diesel_migrations;
 #[macro_use]
 extern crate prettytable;
 
+pub mod config;
 pub mod models;
 pub mod prompt;
 pub mod schema;
@@ -13,8 +14,6 @@ pub mod schematic;
 pub mod tables;
 
 use diesel::prelude::*;
-use dotenv::dotenv;
-use std::env;
 
 use models::*;
 
@@ -22,23 +21,24 @@ use models::*;
 embed_migrations!();
 
 pub fn establish_connection() -> SqliteConnection {
-    dotenv().ok();
-
-    // Get the URL.
-    let database_url = env::var("DATABASE_URL");
-
-    // Default if DATABASE_URL is not set
-    let database_url = match database_url {
-        Ok(x) => x,
-        Err(_) => {
-            println!("env DATABASE_URL not set. Using default of ./database.db");
-            "./database.db".to_string()
+    // Get the config
+    let config = match config::get_config() {
+        Ok(c) => c,
+        Err(_e) => {
+            panic!("Error parsing config. Run `eagle-plm install` first.");
         }
     };
 
+    // Get text version of configpath
+    let mut database_url =
+        config::get_config_path().unwrap_or_else(|_| panic!("Unable to get config path."));
+
+    // Add database name
+    database_url.push(config.database_name);
+
     // Establish the "connection" (We're using SQLite here so no connection excpet to the filesystem)
-    let conn = SqliteConnection::establish(&database_url)
-        .unwrap_or_else(|_| panic!("Error connecting to {}", database_url));
+    let conn = SqliteConnection::establish(&database_url.to_string_lossy())
+        .unwrap_or_else(|_| panic!("Error connecting to {}", &database_url.to_string_lossy()));
 
     // This will run the necessary migrations.
     embedded_migrations::run(&conn).expect("Unable to run test migration.");

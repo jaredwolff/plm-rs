@@ -77,6 +77,8 @@ If you have parts distributed across many libraries, this solution will not work
 ## Roadmap
 
 * [ ] Tests
+* [ ] How to set up a library (what entries are required, etc)
+* [ ] Multiple library support
 * [x] Import a BOM from a .sch file
 * [x] Adds/updates parts to DB from BOM import.
 * [x] Create BOM relationships

@@ -1,6 +1,6 @@
 use clap::{crate_version, Clap};
 
-use eagle_plm::tables::*;
+use eagle_plm::{config, tables::*};
 
 #[derive(Clap)]
 #[clap(version = crate_version!())]
@@ -12,11 +12,16 @@ struct Opts {
 #[derive(Clap)]
 #[clap(version = crate_version!())]
 enum SubCommand {
+    Install(Install),
     Parts(Parts),
     Build(Build),
     Inventory(Inventory),
     Bom(Bom),
 }
+
+/// A subcommand for adding/modifying/removing parts
+#[derive(Clap)]
+struct Install {}
 
 /// A subcommand for adding/modifying/removing parts
 #[derive(Clap)]
@@ -199,6 +204,36 @@ struct ShowInventory {
 fn main() {
     let opts: Opts = Opts::parse();
 
+    // First check if the config is valid
+    match &opts.subcmd {
+        SubCommand::Install(_s) => {
+            let db_name = "database.db".to_string();
+
+            // Get default config
+            let config = config::Config {
+                database_name: db_name.clone(),
+            };
+
+            // Install the config
+            if config::set_config(&config).is_err() {
+                eprintln!("Unable to install database and config");
+                std::process::exit(1);
+            }
+
+            let mut path = config::get_config_path().unwrap();
+            path.push("config.toml");
+
+            println!("Config installed to {}", path.to_string_lossy());
+        }
+        _ => {
+            if config::get_config().is_err() {
+                eprintln!("Unable to get config. Run `eagle-plm install` first.");
+                std::process::exit(1);
+            }
+        }
+    };
+
+    // Then run the command.
     match opts.subcmd {
         SubCommand::Build(s) => match s.subcmd {
             BuildSubCommand::Create(_) => {
@@ -268,5 +303,6 @@ fn main() {
                 bom::show(&a.part_number, &a.version);
             }
         },
+        _ => {}
     }
 }
