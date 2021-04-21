@@ -7,6 +7,9 @@ use std::path::PathBuf;
 pub struct Config {
     /// Name of database within config folder
     pub database_name: String,
+
+    /// Library name
+    pub library_name: String,
 }
 
 /// Set config

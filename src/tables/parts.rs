@@ -17,7 +17,7 @@ struct Record {
     desc: String,
 }
 
-pub fn create() {
+pub fn create(config: &config::Config) {
     // For prompts
     let stdio = io::stdin();
     let input = stdio.lock();
@@ -28,7 +28,7 @@ pub fn create() {
         writer: output,
     };
 
-    let connection = establish_connection();
+    let connection = establish_connection(&config);
 
     // Get the input from stdin
     let pn = prompt.ask_text_entry("Part Number: ");
@@ -65,7 +65,7 @@ pub fn create() {
     }
 }
 
-pub fn rename() {
+pub fn rename(config: &config::Config) {
     // For prompts
     let stdio = io::stdin();
     let input = stdio.lock();
@@ -76,7 +76,7 @@ pub fn rename() {
         writer: output,
     };
 
-    let connection = establish_connection();
+    let connection = establish_connection(&config);
 
     // Get the input from stdin
     let pn = prompt.ask_text_entry("Part Number: ");
@@ -85,9 +85,9 @@ pub fn rename() {
     rename_part(&connection, &pn, &newpn).expect("Unable to change pn");
 }
 
-pub fn create_by_csv(filename: &String) {
+pub fn create_by_csv(config: &config::Config, filename: &String) {
     // Establish connection!
-    let conn = establish_connection();
+    let conn = establish_connection(&config);
 
     // For prompts
     let stdio = io::stdin();
@@ -167,7 +167,7 @@ pub fn create_by_csv(filename: &String) {
     }
 }
 
-pub fn delete() {
+pub fn delete(config: &config::Config) {
     // For prompts
     let stdio = io::stdin();
     let input = stdio.lock();
@@ -181,7 +181,7 @@ pub fn delete() {
     let part = prompt.ask_text_entry("Part Number: ");
 
     // First find the parts.
-    let connection = establish_connection();
+    let connection = establish_connection(&config);
     let part = find_part_by_pn(&connection, &part).expect("Unable to find part!");
 
     // Then ask the user to confirm they want to delete
@@ -202,13 +202,13 @@ pub fn delete() {
     }
 }
 
-pub fn show() {
+pub fn show(config: &config::Config) {
     use crate::schema::*;
 
     // Create the table
     let mut table = Table::new();
 
-    let connection = establish_connection();
+    let connection = establish_connection(&config);
     let results = parts::dsl::parts
         .load::<models::Part>(&connection)
         .expect("Error loading parts");

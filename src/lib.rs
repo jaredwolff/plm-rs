@@ -20,21 +20,13 @@ use models::*;
 // Migrate
 embed_migrations!();
 
-pub fn establish_connection() -> SqliteConnection {
-    // Get the config
-    let config = match config::get_config() {
-        Ok(c) => c,
-        Err(_e) => {
-            panic!("Error parsing config. Run `eagle-plm install` first.");
-        }
-    };
-
+pub fn establish_connection(config: &config::Config) -> SqliteConnection {
     // Get text version of configpath
     let mut database_url =
         config::get_config_path().unwrap_or_else(|_| panic!("Unable to get config path."));
 
     // Add database name
-    database_url.push(config.database_name);
+    database_url.push(config.database_name.clone());
 
     // Establish the "connection" (We're using SQLite here so no connection excpet to the filesystem)
     let conn = SqliteConnection::establish(&database_url.to_string_lossy())

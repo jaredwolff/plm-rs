@@ -10,7 +10,7 @@ use super::inventory;
 
 use std::io;
 
-pub fn create() {
+pub fn create(config: &config::Config) {
     // For prompts
     let stdio = io::stdin();
     let input = stdio.lock();
@@ -21,7 +21,7 @@ pub fn create() {
         writer: output,
     };
 
-    let connection = establish_connection();
+    let connection = establish_connection(&config);
 
     // Get the input from stdin
     let part_number = prompt.ask_text_entry("Part Number: ");
@@ -64,13 +64,13 @@ pub fn create() {
     );
 }
 
-pub fn show(show_all: bool) {
+pub fn show(config: &config::Config, show_all: bool) {
     use crate::schema::*;
 
     // Create the table
     let mut table = Table::new();
 
-    let connection = establish_connection();
+    let connection = establish_connection(&config);
     let results: Vec<Build>;
 
     if show_all {
@@ -103,20 +103,20 @@ pub fn show(show_all: bool) {
     table.printstd();
 }
 
-pub fn delete(build_id: i32) {
+pub fn delete(config: &config::Config, build_id: i32) {
     // Establish connection!
-    let conn = establish_connection();
+    let conn = establish_connection(&config);
 
     delete_build(&conn, &build_id).expect("Unable to delete build.");
 
     println!("Deleted build id: {} successfully!", build_id);
 }
 
-pub fn complete(build_id: i32) {
+pub fn complete(config: &config::Config, build_id: i32) {
     use crate::schema::*;
 
     // Establish connection!
-    let conn = establish_connection();
+    let conn = establish_connection(&config);
 
     // Get the build
     let build = find_build_by_id(&conn, &build_id).expect("Unable to find build!");
@@ -129,7 +129,7 @@ pub fn complete(build_id: i32) {
         .expect("Error loading parts");
 
     // Get the shortages. Shorts only.
-    let shortages = inventory::get_shortages(false).expect("Unable to get shortages.");
+    let shortages = inventory::get_shortages(config, false).expect("Unable to get shortages.");
 
     // Still track if we're short.
     let mut still_short = false;

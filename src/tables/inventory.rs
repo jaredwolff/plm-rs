@@ -78,9 +78,9 @@ where
 }
 
 // Update from inventory export file
-pub fn update_from_file(filename: &String) {
+pub fn update_from_file(config: &config::Config, filename: &String) {
     // Open DB connection
-    let conn = establish_connection();
+    let conn = establish_connection(&config);
 
     // Get records from file
     let records: Vec<InventoryEntry> = match read_records(filename) {
@@ -118,9 +118,9 @@ pub fn update_from_file(filename: &String) {
     }
 }
 
-pub fn create_from_file(filename: &String) {
+pub fn create_from_file(config: &config::Config, filename: &String) {
     // Open DB connection
-    let conn = establish_connection();
+    let conn = establish_connection(&config);
 
     // Get records from file
     let records: Vec<NewInventoryRecord> = match read_records(filename) {
@@ -178,7 +178,7 @@ pub fn create_from_file(filename: &String) {
     }
 }
 
-pub fn create() {
+pub fn create(config: &config::Config) {
     // For prompts
     let stdio = io::stdin();
     let input = stdio.lock();
@@ -193,7 +193,7 @@ pub fn create() {
     let part_number = prompt.ask_text_entry("Enter part number: ");
 
     // Establish connection!
-    let conn = establish_connection();
+    let conn = establish_connection(&config);
 
     // Check if part number exists
     let part = find_part_by_pn(&conn, &part_number);
@@ -240,13 +240,13 @@ pub fn create() {
     }
 }
 
-pub fn show(show_all_entries: bool) {
+pub fn show(config: &config::Config, show_all_entries: bool) {
     use crate::schema::inventories::dsl::*;
 
     // Create the table
     let mut table = Table::new();
 
-    let connection = establish_connection();
+    let connection = establish_connection(&config);
     let results = inventories
         .load::<Inventory>(&connection)
         .expect("Error loading parts");
@@ -291,14 +291,14 @@ pub fn show(show_all_entries: bool) {
 
 // TODO: show shortage by build ID
 // Defualt hide non-short items. Option to view all.
-pub fn show_shortage(show_all_entries: bool) {
+pub fn show_shortage(config: &config::Config, show_all_entries: bool) {
     // Create the table
     let mut table = Table::new();
 
     // Print out the shortages in table format.
     table.add_row(row!["PID", "PN", "MPN", "Desc", "Have", "Needed", "Short",]);
 
-    let shortages = get_shortages(show_all_entries);
+    let shortages = get_shortages(config, show_all_entries);
 
     let shortages = match shortages {
         Ok(x) => x,
@@ -324,9 +324,9 @@ pub fn show_shortage(show_all_entries: bool) {
 }
 
 // Export inventory to csv
-pub fn export_to_file(filename: &String, export_all: bool) {
+pub fn export_to_file(config: &config::Config, filename: &String, export_all: bool) {
     // Establish connection!
-    let conn = establish_connection();
+    let conn = establish_connection(&config);
 
     use crate::schema::*;
 
@@ -373,8 +373,8 @@ pub fn export_to_file(filename: &String, export_all: bool) {
 }
 
 // Export shortages to csv
-pub fn export_shortages_to_file(filename: &String) {
-    let shortages = get_shortages(false).expect("Unable to get shortage report.");
+pub fn export_shortages_to_file(config: &config::Config, filename: &String) {
+    let shortages = get_shortages(config, false).expect("Unable to get shortage report.");
 
     let file = File::create(filename).unwrap();
     let file = BufWriter::new(file);
@@ -392,11 +392,12 @@ pub fn export_shortages_to_file(filename: &String) {
 }
 
 pub fn get_shortages(
+    config: &config::Config,
     show_all_entries: bool,
 ) -> std::result::Result<Vec<Shortage>, diesel::result::Error> {
     use crate::schema::*;
 
-    let connection = establish_connection();
+    let connection = establish_connection(&config);
     let results = builds::dsl::builds
         .filter(builds::dsl::complete.eq(0)) // Only show un-finished builds
         .load::<Build>(&connection);

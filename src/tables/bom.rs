@@ -8,8 +8,6 @@ use quick_xml::de::from_reader;
 
 use self::diesel::prelude::*;
 
-use std::env;
-
 use std::fs::File;
 use std::io::{self, BufReader};
 
@@ -21,7 +19,7 @@ struct LineItem {
     nostuff: i32,
 }
 
-pub fn import(filename: &String) {
+pub fn import(config: &config::Config, filename: &String) {
     use crate::schema::parts::dsl::*;
 
     // For prompts
@@ -35,7 +33,7 @@ pub fn import(filename: &String) {
     };
 
     // Establish connection!
-    let conn = establish_connection();
+    let conn = establish_connection(&config);
 
     // Open the file
     let file = File::open(filename);
@@ -264,11 +262,8 @@ pub fn import(filename: &String) {
         let mut found;
 
         for library in &eagle.drawing.schematic.libraries.library {
-            let default_lib = env::var("DEFAULT_LIBRARY_NAME")
-                .expect("DEFAULT_LIBRARY_NAME is not set in .env file!");
-
             // Check if it's the library we care about.
-            if library.name == default_lib {
+            if library.name == config.library_name {
                 'outer: for deviceset in &library.devicesets.deviceset {
                     for device in &deviceset.devices.device {
                         // Every new technology creates a new part.
@@ -451,14 +446,14 @@ pub fn import(filename: &String) {
     table.printstd();
 }
 
-pub fn show(part_number: &String, version: &Option<i32>) {
+pub fn show(config: &config::Config, part_number: &String, version: &Option<i32>) {
     use crate::schema::*;
 
-    // Establish connection
-    let connection = establish_connection();
+    // Establish connection!
+    let conn = establish_connection(&config);
 
     // Find the part
-    let part = find_part_by_pn(&connection, &part_number);
+    let part = find_part_by_pn(&conn, &part_number);
 
     if part.is_err() {
         println!("{} was not found!", part_number);
@@ -481,7 +476,7 @@ pub fn show(part_number: &String, version: &Option<i32>) {
     let results = parts_parts::dsl::parts_parts
         .filter(parts_parts::dsl::bom_part_id.eq(part.id))
         .filter(parts_parts::dsl::bom_ver.eq(ver))
-        .load::<models::PartsPart>(&connection)
+        .load::<models::PartsPart>(&conn)
         .expect("Error loading parts");
 
     println!("Displaying {} parts", results.len());
@@ -501,12 +496,12 @@ pub fn show(part_number: &String, version: &Option<i32>) {
         "Inventory Qty"
     ]);
     for entry in results {
-        let details = find_part_by_id(&connection, &entry.part_id).expect("Unable to get details!");
+        let details = find_part_by_id(&conn, &entry.part_id).expect("Unable to get details!");
 
         // Get inventory info
         let inventory = inventories::dsl::inventories
             .filter(inventories::dsl::part_id.eq(entry.part_id))
-            .load::<models::Inventory>(&connection)
+            .load::<models::Inventory>(&conn)
             .expect("Error loading parts");
 
         let mut inventory_qty = 0;

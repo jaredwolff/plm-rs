@@ -19,11 +19,11 @@ enum SubCommand {
     Bom(Bom),
 }
 
-/// A subcommand for adding/modifying/removing parts
+/// A subcommand for installing configuration to $HOME
 #[derive(Clap)]
 struct Install {}
 
-/// A subcommand for adding/modifying/removing parts
+/// A subcommand for importing and showing BOM by part number
 #[derive(Clap)]
 struct Bom {
     #[clap(subcommand)]
@@ -204,6 +204,8 @@ struct ShowInventory {
 fn main() {
     let opts: Opts = Opts::parse();
 
+    let config;
+
     // First check if the config is valid
     match &opts.subcmd {
         SubCommand::Install(_s) => {
@@ -212,6 +214,7 @@ fn main() {
             // Get default config
             let config = config::Config {
                 database_name: db_name.clone(),
+                library_name: "your-library".to_string(),
             };
 
             // Install the config
@@ -224,12 +227,17 @@ fn main() {
             path.push("config.toml");
 
             println!("Config installed to {}", path.to_string_lossy());
+            std::process::exit(0);
         }
         _ => {
-            if config::get_config().is_err() {
-                eprintln!("Unable to get config. Run `eagle-plm install` first.");
-                std::process::exit(1);
-            }
+            // Set the config
+            config = match config::get_config() {
+                Ok(c) => c,
+                Err(_e) => {
+                    eprintln!("Unable to get config. Run `eagle-plm install` first.");
+                    std::process::exit(1);
+                }
+            };
         }
     };
 
@@ -237,70 +245,70 @@ fn main() {
     match opts.subcmd {
         SubCommand::Build(s) => match s.subcmd {
             BuildSubCommand::Create(_) => {
-                builds::create();
+                builds::create(&config);
             }
             // TODO: take the next argument after delete instead of needing a flag...
             BuildSubCommand::Delete(a) => {
-                builds::delete(a.build_id);
+                builds::delete(&config, a.build_id);
             }
             BuildSubCommand::Show(a) => {
-                builds::show(a.all);
+                builds::show(&config, a.all);
             }
             BuildSubCommand::Complete(a) => {
-                builds::complete(a.build_id);
+                builds::complete(&config, a.build_id);
             }
         },
         SubCommand::Inventory(s) => match s.subcmd {
             InventorySubCommand::Create(_) => {
-                inventory::create();
+                inventory::create(&config);
             }
             InventorySubCommand::Import(a) => {
-                inventory::create_from_file(&a.filename);
+                inventory::create_from_file(&config, &a.filename);
             }
             InventorySubCommand::Update(a) => {
-                inventory::update_from_file(&a.filename);
+                inventory::update_from_file(&config, &a.filename);
             }
             InventorySubCommand::Export(a) => {
-                inventory::export_to_file(&a.filename, a.export_all);
+                inventory::export_to_file(&config, &a.filename, a.export_all);
             }
             InventorySubCommand::Shortages(a) => {
-                inventory::export_shortages_to_file(&a.filename);
+                inventory::export_shortages_to_file(&config, &a.filename);
             }
             InventorySubCommand::Delete(_) => {
                 println!("Not implemented!");
             }
             InventorySubCommand::Show(a) => {
                 if a.show_shortage {
-                    inventory::show_shortage(a.all_entries);
+                    inventory::show_shortage(&config, a.all_entries);
                 } else {
-                    inventory::show(a.all_entries);
+                    inventory::show(&config, a.all_entries);
                 }
             }
         },
         // TODO: Search for a part
         SubCommand::Parts(s) => match s.subcmd {
             PartsSubCommand::Create(a) => match a.filename {
-                Some(x) => parts::create_by_csv(&x),
-                None => parts::create(),
+                Some(x) => parts::create_by_csv(&config, &x),
+                None => parts::create(&config),
             },
             PartsSubCommand::Delete(_) => {
-                parts::delete();
+                parts::delete(&config);
             }
             PartsSubCommand::Show(_) => {
-                parts::show();
+                parts::show(&config);
             }
             PartsSubCommand::Rename(_) => {
-                parts::rename();
+                parts::rename(&config);
             }
         },
         SubCommand::Bom(s) => match s.subcmd {
             BomSubCommand::Import(a) => {
-                bom::import(&a.filename);
+                bom::import(&config, &a.filename);
             }
             BomSubCommand::Show(a) => {
                 // Note: version is borrowed as an Option
                 // not required for this command to work
-                bom::show(&a.part_number, &a.version);
+                bom::show(&config, &a.part_number, &a.version);
             }
         },
         _ => {}
