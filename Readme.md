@@ -79,6 +79,7 @@ If you have parts distributed across many libraries, this solution will not work
 * [ ] Tests
 * [ ] How to set up a library (what entries are required, etc)
 * [ ] Multiple library support
+* [ ] Importing a specific variant / or create BOMs based on different variants
 * [x] Import a BOM from a .sch file
 * [x] Adds/updates parts to DB from BOM import.
 * [x] Create BOM relationships
@@ -106,6 +107,10 @@ If you have parts distributed across many libraries, this solution will not work
   * [ ] Prompts user to allow migration on startup on new version
 * [ ] Tracking inventory change history
 * [ ] Central config and database location 
+* [ ] Allocation with attrition
+* [ ] Part reservation 
+* [ ] Usage descriptions in help dialog
+  * [ ] Inventory import csv format
 
 ## Handy URLS
 

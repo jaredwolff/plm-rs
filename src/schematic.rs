@@ -15,9 +15,21 @@ pub struct Drawing {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq)]
+pub struct VariantDef {
+    pub name: String,
+    pub current: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+pub struct VariantDefs {
+    pub variantdef: Vec<VariantDef>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct Schematic {
     pub parts: Parts,
     pub attributes: Attributes,
+    pub variantdefs: VariantDefs,
     pub libraries: Libraries,
 }
 
@@ -87,11 +99,14 @@ pub struct Part {
     pub deviceset: String,
     pub technology: Option<String>,
     pub device: String,
-    pub variant: Option<Variant>,
+    #[serde(rename = "variant", default)]
+    pub variants: Vec<Variant>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct Variant {
+    #[serde(default)]
     pub name: String,
+    #[serde(default)]
     pub populate: String,
 }

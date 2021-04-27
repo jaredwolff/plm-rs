@@ -2,6 +2,7 @@ extern crate diesel;
 extern crate quick_xml;
 extern crate serde;
 
+use crate::schematic::VariantDef;
 use crate::*;
 use prettytable::Table;
 use quick_xml::de::from_reader;
@@ -73,6 +74,25 @@ pub fn import(config: &config::Config, filename: &String) {
             println!("Part name: {}", bom_pn);
         }
     }
+
+    // Get the variant list
+    let mut variant: Option<VariantDef> = None;
+    for v in &eagle.drawing.schematic.variantdefs.variantdef {
+        // Get the current def
+        if v.current == Some("yes".to_string()) {
+            println!("Variant: {}", v.name);
+            variant = Some(v.clone());
+        }
+    }
+
+    // Error if not active variant
+    if variant.is_none() {
+        println!("Error: no active variant!");
+        std::process::exit(1);
+    }
+
+    // Now convert to a normal VariantDef
+    let variant = variant.unwrap();
 
     // Warning about blank description
     if bom_desc == "" {
@@ -175,8 +195,10 @@ pub fn import(config: &config::Config, filename: &String) {
 
         // Check if it's no stuff. If so skip over adding it.
         let mut nostuff = 0;
-        if part.variant.is_some() && part.variant.as_ref().unwrap().populate == "no" {
-            nostuff = 1;
+        for var in &part.variants {
+            if &var.name == &variant.name && var.populate == "no".to_string() {
+                nostuff = 1;
+            }
         }
 
         // Create temp line item
