@@ -35,6 +35,17 @@ struct Bom {
 enum BomSubCommand {
     Import(ImportBom),
     Show(ShowBom),
+    Export(ExportBom),
+}
+
+/// A subcommand for importing a bom from an Eagle .sch file
+#[derive(Clap)]
+struct ExportBom {
+    /// Name of BOM to export
+    name: String,
+    /// Version of the part in question
+    #[clap(short, long)]
+    version: Option<i32>,
 }
 
 /// A subcommand for importing a bom from an Eagle .sch file
@@ -304,6 +315,9 @@ fn main() {
         SubCommand::Bom(s) => match s.subcmd {
             BomSubCommand::Import(a) => {
                 bom::import(&config, &a.filename);
+            }
+            BomSubCommand::Export(a) => {
+                bom::export(&config, &a.name, &a.version);
             }
             BomSubCommand::Show(a) => {
                 // Note: version is borrowed as an Option

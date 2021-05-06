@@ -9,8 +9,10 @@ use quick_xml::de::from_reader;
 
 use self::diesel::prelude::*;
 
+use chrono::Utc;
+use serde::Serialize;
 use std::fs::File;
-use std::io::{self, BufReader};
+use std::io::{self, BufReader, BufWriter};
 
 #[derive(Eq, PartialEq)]
 struct LineItem {
@@ -18,6 +20,17 @@ struct LineItem {
     pn: String,
     quantity: i32,
     nostuff: i32,
+}
+
+#[derive(Serialize)]
+struct BomEntry {
+    pn: String,
+    quantity: i32,
+    refdes: String,
+    mpn: String,
+    descr: String,
+    ver: i32,
+    inventory_qty: i32,
 }
 
 pub fn import(config: &config::Config, filename: &String) {
@@ -164,7 +177,7 @@ pub fn import(config: &config::Config, filename: &String) {
         // TODO: a more comprehensive list or better way of filtering these..
         let check = [
             "GND", "FIDUCIAL", "MOUNTING", "FRAME", "+3V3", "TP", "VCC", "VBUS", "V5V0",
-            "DOCFIELD", "VBAT", "VSYS", "PAD", "VDC",
+            "DOCFIELD", "VBAT", "VSYS", "PAD", "VDC", "LOGO",
         ];
 
         for entry in check.iter() {
@@ -224,7 +237,8 @@ pub fn import(config: &config::Config, filename: &String) {
             }
         }
 
-        if !found {
+        // Only add to the list if it was found and not nostuff
+        if !found && nostuff != 1 {
             // If not found, add it
             list.push(item);
         } else if nostuff == 0 {
@@ -545,6 +559,81 @@ pub fn show(config: &config::Config, part_number: &String, version: &Option<i32>
         ]);
     }
     table.printstd();
+}
+
+pub fn export(config: &config::Config, part_number: &str, version: &Option<i32>) {
+    use crate::schema::*;
+
+    // Establish connection!
+    let conn = establish_connection(&config);
+
+    // Find the part
+    let part = find_part_by_pn(&conn, &part_number);
+
+    if part.is_err() {
+        println!("{} was not found!", part_number);
+        std::process::exit(1);
+    }
+
+    // Transform the response into a Part
+    let part = part.unwrap();
+
+    // Then either use the provided version or the latest
+    let ver = match version {
+        Some(x) => x,
+        None => &part.ver,
+    };
+
+    // Get all the parts related to this BOM
+    let results = parts_parts::dsl::parts_parts
+        .filter(parts_parts::dsl::bom_part_id.eq(part.id))
+        .filter(parts_parts::dsl::bom_ver.eq(ver))
+        .load::<models::PartsPart>(&conn)
+        .expect("Error loading parts");
+
+    // Create filename
+    let filename = format!("{}-v{}-{}.csv", part_number, ver, Utc::now().timestamp());
+
+    // File operations
+    let file = File::create(&filename).unwrap();
+    let file = BufWriter::new(file);
+
+    // Create CSV writer
+    let mut wtr = csv::Writer::from_writer(file);
+
+    for entry in results {
+        let details = find_part_by_id(&conn, &entry.part_id).expect("Unable to get details!");
+
+        // Get inventory info
+        let inventory = inventories::dsl::inventories
+            .filter(inventories::dsl::part_id.eq(entry.part_id))
+            .load::<models::Inventory>(&conn)
+            .expect("Error loading parts");
+
+        let mut inventory_qty = 0;
+
+        // Tally inventory
+        for item in inventory {
+            // Increment quantity
+            inventory_qty += item.quantity;
+        }
+
+        // Then pop it into a serializeable struct
+        let line = BomEntry {
+            quantity: entry.quantity,
+            refdes: entry.refdes,
+            pn: details.pn,
+            mpn: details.mpn,
+            descr: details.descr,
+            ver: details.ver,
+            inventory_qty,
+        };
+
+        wtr.serialize(line).expect("Unable to serialize.");
+        wtr.flush().expect("Unable to flush");
+    }
+
+    println!("Inventory list exported to {}", filename);
 }
 
 // pub fn delete(part_number: &String, version: &i32) {

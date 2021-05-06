@@ -101,6 +101,7 @@ If you have parts distributed across many libraries, this solution will not work
 * [ ] Importing purchase (shortage check only)
 * [x] `bom show` without `-v` shows latest
 * [x] Exporting shortage list to CSV for easy purchases
+* [x] Export bom to CSV
 * [ ] Integration of Digikeypn
 * [ ] Documentation
 * [ ] Migration built in

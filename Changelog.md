@@ -16,6 +16,7 @@ All notable changes to this project will be documented in this file. This file a
 ### Added
 
 * Changelog!
+* Added export BOM function
 * Added export shortages function
 * Added export shortages command
 * Added update_from_file in inventory
