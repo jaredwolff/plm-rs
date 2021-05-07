@@ -27,7 +27,7 @@ pub struct NewUpdatePart<'a> {
     pub mqty: &'a i32,
 }
 
-#[derive(Identifiable, Queryable)]
+#[derive(Identifiable, Queryable, Debug)]
 pub struct PartsPart {
     pub id: i32,
     pub created_at: NaiveDateTime,
