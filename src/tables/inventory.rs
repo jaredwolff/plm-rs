@@ -303,7 +303,7 @@ pub fn show_shortage(app: &mut crate::Application, show_all_entries: bool) {
         table.add_row(row![
             entry.pid,
             entry.pn,
-            format!("\"{}\"", entry.mpn),
+            entry.mpn,
             entry.desc,
             entry.have,
             entry.needed,
