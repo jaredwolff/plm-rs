@@ -5,7 +5,6 @@ use serde::Deserialize;
 
 use crate::{models::*, *};
 use diesel::prelude::*;
-use std::io;
 
 use std::fs::File;
 use std::io::BufReader;
@@ -17,24 +16,12 @@ struct Record {
     desc: String,
 }
 
-pub fn create(config: &config::Config) {
-    // For prompts
-    let stdio = io::stdin();
-    let input = stdio.lock();
-    let output = io::stdout();
-
-    let mut prompt = prompt::Prompt {
-        reader: input,
-        writer: output,
-    };
-
-    let connection = establish_connection(&config);
-
+pub fn create(app: &mut crate::Application) {
     // Get the input from stdin
-    let pn = prompt.ask_text_entry("Part Number: ");
-    let mpn = prompt.ask_text_entry("Manufacturer Part Number: ");
-    let desc = prompt.ask_text_entry("Description: ");
-    let ver = prompt.ask_text_entry("Version: ");
+    let pn = app.prompt.ask_text_entry("Part Number: ");
+    let mpn = app.prompt.ask_text_entry("Manufacturer Part Number: ");
+    let desc = app.prompt.ask_text_entry("Description: ");
+    let ver = app.prompt.ask_text_entry("Version: ");
     let ver: i32 = ver.trim().parse().expect("Invalid version number!");
 
     // Create the part
@@ -46,59 +33,34 @@ pub fn create(config: &config::Config) {
         mqty: &1,
     };
 
-    let found = find_part_by_pn(&connection, &pn);
+    let found = find_part_by_pn(&app.conn, &pn);
 
     // If already found ask if it should be updated
     if found.is_ok() {
         let question = format!("{} already exists! Would you like to update it?", pn);
-        let update = prompt.ask_yes_no_question(&question);
+        let update = app.prompt.ask_yes_no_question(&question);
 
         // Update if they said yes.
         if update {
-            update_part(&connection, &found.unwrap().id, &part).expect("Unable to update part!");
+            update_part(&app.conn, &found.unwrap().id, &part).expect("Unable to update part!");
 
             // Check for success
             println!("{} updated!", pn);
         }
     } else {
-        create_part(&connection, &part).expect("Unable to create part!");
+        create_part(&app.conn, &part).expect("Unable to create part!");
     }
 }
 
-pub fn rename(config: &config::Config) {
-    // For prompts
-    let stdio = io::stdin();
-    let input = stdio.lock();
-    let output = io::stdout();
-
-    let mut prompt = prompt::Prompt {
-        reader: input,
-        writer: output,
-    };
-
-    let connection = establish_connection(&config);
-
+pub fn rename(app: &mut crate::Application) {
     // Get the input from stdin
-    let pn = prompt.ask_text_entry("Part Number: ");
-    let newpn = prompt.ask_text_entry("New Part Number: ");
+    let pn = app.prompt.ask_text_entry("Part Number: ");
+    let newpn = app.prompt.ask_text_entry("New Part Number: ");
 
-    rename_part(&connection, &pn, &newpn).expect("Unable to change pn");
+    rename_part(&app.conn, &pn, &newpn).expect("Unable to change pn");
 }
 
-pub fn create_by_csv(config: &config::Config, filename: &String) {
-    // Establish connection!
-    let conn = establish_connection(&config);
-
-    // For prompts
-    let stdio = io::stdin();
-    let input = stdio.lock();
-    let output = io::stdout();
-
-    let mut prompt = prompt::Prompt {
-        reader: input,
-        writer: output,
-    };
-
+pub fn create_by_csv(app: &mut crate::Application, filename: &String) {
     // Open the file
     let file = File::open(filename).unwrap();
     let file = BufReader::new(file);
@@ -128,7 +90,7 @@ pub fn create_by_csv(config: &config::Config, filename: &String) {
             mqty: &1,
         };
 
-        let found = find_part_by_pn(&conn, &part.pn);
+        let found = find_part_by_pn(&app.conn, &part.pn);
 
         // If already found ask if it should be updated
         if found.is_ok() {
@@ -150,11 +112,11 @@ pub fn create_by_csv(config: &config::Config, filename: &String) {
                 table.add_row(row!["Change to:", part.pn, part.mpn, part.descr, part.ver]);
                 table.printstd();
 
-                let update = prompt.ask_yes_no_question(&question);
+                let update = app.prompt.ask_yes_no_question(&question);
 
                 // Update if they said yes.
                 if update {
-                    update_part(&conn, &found.id, &part).expect("Unable to update part!");
+                    update_part(&app.conn, &found.id, &part).expect("Unable to update part!");
 
                     // Check for success
                     println!("{} updated!", part.pn);
@@ -162,36 +124,25 @@ pub fn create_by_csv(config: &config::Config, filename: &String) {
             }
         } else {
             println!("Creating: {:?}", part);
-            create_part(&conn, &part).expect("Unable to create part!");
+            create_part(&app.conn, &part).expect("Unable to create part!");
         }
     }
 }
 
-pub fn delete(config: &config::Config) {
-    // For prompts
-    let stdio = io::stdin();
-    let input = stdio.lock();
-    let output = io::stdout();
-
-    let mut prompt = prompt::Prompt {
-        reader: input,
-        writer: output,
-    };
-
-    let part = prompt.ask_text_entry("Part Number: ");
+pub fn delete(app: &mut crate::Application) {
+    let part = app.prompt.ask_text_entry("Part Number: ");
 
     // First find the parts.
-    let connection = establish_connection(&config);
-    let part = find_part_by_pn(&connection, &part).expect("Unable to find part!");
+    let part = find_part_by_pn(&app.conn, &part).expect("Unable to find part!");
 
     // Then ask the user to confirm they want to delete
     let question = format!("Would you like to delete {}?", part.pn);
-    let delete = prompt.ask_yes_no_question(&question);
+    let delete = app.prompt.ask_yes_no_question(&question);
 
     // THEN, delete if they said yes.
     if delete {
         // Delete the part
-        let res = delete_part(&connection, &part.id);
+        let res = delete_part(&app.conn, &part.id);
 
         // Depending on the result show the feedback
         if res.is_err() {
@@ -202,15 +153,14 @@ pub fn delete(config: &config::Config) {
     }
 }
 
-pub fn show(config: &config::Config) {
+pub fn show(app: &mut crate::Application) {
     use crate::schema::*;
 
     // Create the table
     let mut table = Table::new();
 
-    let connection = establish_connection(&config);
     let results = parts::dsl::parts
-        .load::<models::Part>(&connection)
+        .load::<models::Part>(&app.conn)
         .expect("Error loading parts");
 
     println!("Displaying {} parts", results.len());

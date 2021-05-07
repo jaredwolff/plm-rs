@@ -1,12 +1,15 @@
 use clap::{crate_version, Clap};
-
-use eagle_plm::{config, tables::*};
+use eagle_plm::{config, establish_connection, prompt, tables::*, Application};
+use std::io;
 
 #[derive(Clap)]
 #[clap(version = crate_version!())]
 struct Opts {
     #[clap(subcommand)]
     subcmd: SubCommand,
+    /// Optional path to config
+    #[clap(short, long)]
+    config_path: Option<String>,
 }
 
 #[derive(Clap)]
@@ -215,114 +218,149 @@ struct ShowInventory {
 fn main() {
     let opts: Opts = Opts::parse();
 
-    let config;
+    // Config path
+    let config_path = match config::get_config_path(&opts.config_path) {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("Unable to get a valid config path. Error: {}", e);
+            std::process::exit(1);
+        }
+    };
+
+    let config: config::Config;
 
     // First check if the config is valid
     match &opts.subcmd {
         SubCommand::Install(_s) => {
             let db_name = "database.db".to_string();
 
-            // Get default config
-            let config = config::Config {
+            config = config::Config {
                 database_name: db_name.clone(),
                 library_name: "your-library".to_string(),
+                attrition_config: config::AttritionConfig {
+                    entries: Vec::new(),
+                },
+                part_number_ignore_list: Vec::new(),
             };
 
             // Install the config
-            if config::set_config(&config).is_err() {
+            if config::save_config(&config, &config_path).is_err() {
                 eprintln!("Unable to install database and config");
                 std::process::exit(1);
-            }
+            };
 
-            let mut path = config::get_config_path().unwrap();
-            path.push("config.toml");
-
-            println!("Config installed to {}", path.to_string_lossy());
+            println!("Config installed to {}", config_path.to_string_lossy());
             std::process::exit(0);
         }
         _ => {
             // Set the config
-            config = match config::get_config() {
+            config = match config::load_config(&config_path) {
                 Ok(c) => c,
-                Err(_e) => {
-                    eprintln!("Unable to get config. Run `eagle-plm install` first.");
+                Err(e) => {
+                    if e.to_string().contains("No such file or directory") {
+                        eprintln!("Unable to get config. Run `eagle-plm install` first.");
+                    } else {
+                        eprintln!("Error loading configuration: {}", e);
+                    }
+
                     std::process::exit(1);
                 }
             };
         }
     };
 
+    // Establish connection!
+    let conn = establish_connection(&config.database_name);
+
+    // For prompts
+    let stdio = io::stdin();
+    let input = stdio.lock();
+    let output = io::stdout();
+
+    let prompt = prompt::Prompt {
+        reader: input,
+        writer: output,
+    };
+
+    // Settings for application
+    let mut app = Application {
+        config_path,
+        config,
+        prompt,
+        conn,
+    };
+
     // Then run the command.
     match opts.subcmd {
         SubCommand::Build(s) => match s.subcmd {
             BuildSubCommand::Create(_) => {
-                builds::create(&config);
+                builds::create(&mut app);
             }
             // TODO: take the next argument after delete instead of needing a flag...
             BuildSubCommand::Delete(a) => {
-                builds::delete(&config, a.build_id);
+                builds::delete(&mut app, a.build_id);
             }
             BuildSubCommand::Show(a) => {
-                builds::show(&config, a.all);
+                builds::show(&mut app, a.all);
             }
             BuildSubCommand::Complete(a) => {
-                builds::complete(&config, a.build_id);
+                builds::complete(&mut app, a.build_id);
             }
         },
         SubCommand::Inventory(s) => match s.subcmd {
             InventorySubCommand::Create(_) => {
-                inventory::create(&config);
+                inventory::create(&mut app);
             }
             InventorySubCommand::Import(a) => {
-                inventory::create_from_file(&config, &a.filename);
+                inventory::create_from_file(&mut app, &a.filename);
             }
             InventorySubCommand::Update(a) => {
-                inventory::update_from_file(&config, &a.filename);
+                inventory::update_from_file(&mut app, &a.filename);
             }
             InventorySubCommand::Export(a) => {
-                inventory::export_to_file(&config, &a.filename, a.export_all);
+                inventory::export_to_file(&mut app, &a.filename, a.export_all);
             }
             InventorySubCommand::Shortages(a) => {
-                inventory::export_shortages_to_file(&config, &a.filename);
+                inventory::export_shortages_to_file(&mut app, &a.filename);
             }
             InventorySubCommand::Delete(_) => {
                 println!("Not implemented!");
             }
             InventorySubCommand::Show(a) => {
                 if a.show_shortage {
-                    inventory::show_shortage(&config, a.all_entries);
+                    inventory::show_shortage(&mut app, a.all_entries);
                 } else {
-                    inventory::show(&config, a.all_entries);
+                    inventory::show(&mut app, a.all_entries);
                 }
             }
         },
         // TODO: Search for a part
         SubCommand::Parts(s) => match s.subcmd {
             PartsSubCommand::Create(a) => match a.filename {
-                Some(x) => parts::create_by_csv(&config, &x),
-                None => parts::create(&config),
+                Some(x) => parts::create_by_csv(&mut app, &x),
+                None => parts::create(&mut app),
             },
             PartsSubCommand::Delete(_) => {
-                parts::delete(&config);
+                parts::delete(&mut app);
             }
             PartsSubCommand::Show(_) => {
-                parts::show(&config);
+                parts::show(&mut app);
             }
             PartsSubCommand::Rename(_) => {
-                parts::rename(&config);
+                parts::rename(&mut app);
             }
         },
         SubCommand::Bom(s) => match s.subcmd {
             BomSubCommand::Import(a) => {
-                bom::import(&config, &a.filename);
+                bom::import(&mut app, &a.filename);
             }
             BomSubCommand::Export(a) => {
-                bom::export(&config, &a.name, &a.version);
+                bom::export(&mut app, &a.name, &a.version);
             }
             BomSubCommand::Show(a) => {
                 // Note: version is borrowed as an Option
                 // not required for this command to work
-                bom::show(&config, &a.part_number, &a.version);
+                bom::show(&mut app, &a.part_number, &a.version);
             }
         },
         _ => {}

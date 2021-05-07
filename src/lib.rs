@@ -17,23 +17,39 @@ use diesel::prelude::*;
 
 use models::*;
 
+use std::io::{StdinLock, Stdout};
+
+pub struct Application<'a> {
+    /// Config
+    pub config: config::Config,
+
+    /// Path to config
+    pub config_path: std::path::PathBuf,
+
+    /// Global prompt
+    pub prompt: prompt::Prompt<StdinLock<'a>, Stdout>,
+
+    /// Global conn
+    pub conn: SqliteConnection,
+}
+
 // Migrate
 embed_migrations!();
 
-pub fn establish_connection(config: &config::Config) -> SqliteConnection {
+pub fn establish_connection(db_name: &String) -> SqliteConnection {
     // Get text version of configpath
     let mut database_url =
-        config::get_config_path().unwrap_or_else(|_| panic!("Unable to get config path."));
+        config::get_default_config_path().unwrap_or_else(|_| panic!("Unable to get config path."));
 
     // Add database name
-    database_url.push(config.database_name.clone());
+    database_url.push(db_name);
 
     // Establish the "connection" (We're using SQLite here so no connection excpet to the filesystem)
     let conn = SqliteConnection::establish(&database_url.to_string_lossy())
         .unwrap_or_else(|_| panic!("Error connecting to {}", &database_url.to_string_lossy()));
 
-    // This will run the necessary migrations.
-    embedded_migrations::run(&conn).expect("Unable to run test migration.");
+    // This will run migrations and also create a DB if it doesn't exist.
+    embedded_migrations::run(&conn).expect("Unable to run migration.");
 
     conn
 }
@@ -97,6 +113,8 @@ pub fn find_part_by_mpn(
     mpn: &str,
 ) -> std::result::Result<Part, diesel::result::Error> {
     use schema::parts;
+
+    println!("mpn: \"{}\"", mpn);
 
     parts::dsl::parts
         .filter(parts::dsl::mpn.eq(mpn))

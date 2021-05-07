@@ -10,27 +10,15 @@ use super::inventory;
 
 use std::io;
 
-pub fn create(config: &config::Config) {
-    // For prompts
-    let stdio = io::stdin();
-    let input = stdio.lock();
-    let output = io::stdout();
-
-    let mut prompt = prompt::Prompt {
-        reader: input,
-        writer: output,
-    };
-
-    let connection = establish_connection(&config);
-
+pub fn create(app: &mut crate::Application) {
     // Get the input from stdin
-    let part_number = prompt.ask_text_entry("Part Number: ");
-    let version = prompt.ask_text_entry("Version: ");
+    let part_number = app.prompt.ask_text_entry("Part Number: ");
+    let version = app.prompt.ask_text_entry("Version: ");
     let version: i32 = version.trim().parse().expect("Invalid version number!");
-    let quantity = prompt.ask_text_entry("Quantity: ");
+    let quantity = app.prompt.ask_text_entry("Quantity: ");
     let quantity: i32 = quantity.trim().parse().expect("Invalid quantity!");
 
-    let part = find_part_by_pn(&connection, &part_number);
+    let part = find_part_by_pn(&app.conn, &part_number);
 
     if part.is_err() {
         println!("{} version {} was not found!", part_number, version);
@@ -56,7 +44,7 @@ pub fn create(config: &config::Config) {
         part_id: &part.id,
     };
 
-    create_build(&connection, &build).expect("Unable to create build!");
+    create_build(&app.conn, &build).expect("Unable to create build!");
 
     println!(
         "Created build of {} ver: {} with qty: {}",
@@ -64,23 +52,22 @@ pub fn create(config: &config::Config) {
     );
 }
 
-pub fn show(config: &config::Config, show_all: bool) {
+pub fn show(app: &mut crate::Application, show_all: bool) {
     use crate::schema::*;
 
     // Create the table
     let mut table = Table::new();
 
-    let connection = establish_connection(&config);
     let results: Vec<Build>;
 
     if show_all {
         results = builds::dsl::builds
-            .load::<models::Build>(&connection)
+            .load::<models::Build>(&app.conn)
             .expect("Error loading builds");
     } else {
         results = builds::dsl::builds
             .filter(builds::dsl::complete.eq(0))
-            .load::<models::Build>(&connection)
+            .load::<models::Build>(&app.conn)
             .expect("Error loading builds");
     }
 
@@ -90,7 +77,7 @@ pub fn show(config: &config::Config, show_all: bool) {
     ]);
     for build in results {
         // Get the part info..
-        let part = find_part_by_id(&connection, &build.part_id).expect("Unable to get build part.");
+        let part = find_part_by_id(&app.conn, &build.part_id).expect("Unable to get build part.");
         table.add_row(row![
             build.id,
             part.pn,
@@ -103,33 +90,27 @@ pub fn show(config: &config::Config, show_all: bool) {
     table.printstd();
 }
 
-pub fn delete(config: &config::Config, build_id: i32) {
-    // Establish connection!
-    let conn = establish_connection(&config);
-
-    delete_build(&conn, &build_id).expect("Unable to delete build.");
+pub fn delete(app: &mut crate::Application, build_id: i32) {
+    delete_build(&app.conn, &build_id).expect("Unable to delete build.");
 
     println!("Deleted build id: {} successfully!", build_id);
 }
 
-pub fn complete(config: &config::Config, build_id: i32) {
+pub fn complete(app: &mut crate::Application, build_id: i32) {
     use crate::schema::*;
 
-    // Establish connection!
-    let conn = establish_connection(&config);
-
     // Get the build
-    let build = find_build_by_id(&conn, &build_id).expect("Unable to find build!");
+    let build = find_build_by_id(&app.conn, &build_id).expect("Unable to find build!");
 
     // Get partslist
     let bom_list = parts_parts::dsl::parts_parts
         .filter(parts_parts::dsl::bom_part_id.eq(build.part_id))
         .filter(parts_parts::dsl::bom_ver.eq(build.part_ver))
-        .load::<PartsPart>(&conn)
+        .load::<PartsPart>(&app.conn)
         .expect("Error loading parts");
 
     // Get the shortages. Shorts only.
-    let shortages = inventory::get_shortages(config, false).expect("Unable to get shortages.");
+    let shortages = inventory::get_shortages(app, false).expect("Unable to get shortages.");
 
     // Still track if we're short.
     let mut still_short = false;
@@ -180,7 +161,7 @@ pub fn complete(config: &config::Config, build_id: i32) {
             let mut quantity = bom_list_entry.quantity;
 
             // Inventory entries
-            let inventory_entries = find_inventories_by_part_id(&conn, &bom_list_entry.part_id)
+            let inventory_entries = find_inventories_by_part_id(&app.conn, &bom_list_entry.part_id)
                 .expect("Unable to query for inventory");
 
             // Calculate the quantity
@@ -216,7 +197,7 @@ pub fn complete(config: &config::Config, build_id: i32) {
                 };
 
                 // Push this inventory item
-                update_inventory_by_id(&conn, &entry.id, &update)
+                update_inventory_by_id(&app.conn, &entry.id, &update)
                     .expect("Unable to create inventory.");
 
                 // Add the cost used to total_cost
@@ -266,9 +247,9 @@ pub fn complete(config: &config::Config, build_id: i32) {
         };
 
         // Update build by id
-        update_build_by_id(&conn, &build.id, &update_build).expect("Unable to update build!");
+        update_build_by_id(&app.conn, &build.id, &update_build).expect("Unable to update build!");
 
         // Push this inventory item
-        create_inventory(&conn, &new_inventory).expect("Unable to create inventory.");
+        create_inventory(&app.conn, &new_inventory).expect("Unable to create inventory.");
     }
 }

@@ -10,8 +10,6 @@ use self::diesel::prelude::*;
 use std::io::{BufReader, BufWriter};
 use std::{fmt::Debug, fs::File};
 
-use std::io;
-
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
@@ -78,10 +76,7 @@ where
 }
 
 // Update from inventory export file
-pub fn update_from_file(config: &config::Config, filename: &String) {
-    // Open DB connection
-    let conn = establish_connection(&config);
-
+pub fn update_from_file(app: &mut crate::Application, filename: &String) {
     // Get records from file
     let records: Vec<InventoryEntry> = match read_records(filename) {
         Ok(r) => r,
@@ -110,7 +105,7 @@ pub fn update_from_file(config: &config::Config, filename: &String) {
         };
 
         // Then update the entry as needed
-        if let Err(e) = update_inventory_by_id(&conn, &record.id, &update) {
+        if let Err(e) = update_inventory_by_id(&app.conn, &record.id, &update) {
             eprintln!("Error updating inventory id: {}. Error: {}", record.id, e);
         } else {
             println!("Updated: {}", record.mpn);
@@ -118,9 +113,9 @@ pub fn update_from_file(config: &config::Config, filename: &String) {
     }
 }
 
-pub fn create_from_file(config: &config::Config, filename: &String) {
-    // Open DB connection
-    let conn = establish_connection(&config);
+pub fn create_from_file(app: &mut crate::Application, filename: &String) {
+    println!("{:?}", app.config);
+    println!("{:?}", filename);
 
     // Get records from file
     let records: Vec<NewInventoryRecord> = match read_records(filename) {
@@ -132,14 +127,24 @@ pub fn create_from_file(config: &config::Config, filename: &String) {
     };
 
     for record in &records {
+        println!("Finding: \"{}\"", record.mpn);
+
         // Check if part number exists
         // Uses MPN as it's the common denominator between this and Digikey/Arrow/Mouser etc.
-        let part = find_part_by_mpn(&conn, &record.mpn);
+        let part = find_part_by_mpn(&app.conn, &record.mpn);
 
         // If theres an error exit so the user can fix the problem.
-        if part.is_err() {
-            println!("{} was not found! No changes were made.", record.mpn);
-            std::process::exit(1);
+        match part {
+            Err(e) => {
+                println!(
+                    "{} was not found! No changes were made. Error: {}",
+                    record.mpn, e
+                );
+                std::process::exit(1);
+            }
+            _ => {
+                continue;
+            }
         }
     }
 
@@ -158,7 +163,7 @@ pub fn create_from_file(config: &config::Config, filename: &String) {
         };
 
         // Check if part number exists
-        let part = find_part_by_mpn(&conn, &record.mpn).expect("Unable to get part.");
+        let part = find_part_by_mpn(&app.conn, &record.mpn).expect("Unable to get part.");
 
         // Commits change
         let entry = NewUpdateInventoryEntry {
@@ -171,32 +176,19 @@ pub fn create_from_file(config: &config::Config, filename: &String) {
         };
 
         // Finally create the inventory if all look ok!
-        create_inventory(&conn, &entry).expect("Unable to create inventory item.");
+        create_inventory(&app.conn, &entry).expect("Unable to create inventory item.");
 
         // Print out that it was successful
         println!("Created inventory for {}!", part.pn);
     }
 }
 
-pub fn create(config: &config::Config) {
-    // For prompts
-    let stdio = io::stdin();
-    let input = stdio.lock();
-    let output = io::stdout();
-
-    let mut prompt = prompt::Prompt {
-        reader: input,
-        writer: output,
-    };
-
-    // Prompts for a part number
-    let part_number = prompt.ask_text_entry("Enter part number: ");
-
-    // Establish connection!
-    let conn = establish_connection(&config);
+pub fn create(app: &mut crate::Application) {
+    // app.prompts for a part number
+    let part_number = app.prompt.ask_text_entry("Enter part number: ");
 
     // Check if part number exists
-    let part = find_part_by_pn(&conn, &part_number);
+    let part = find_part_by_pn(&app.conn, &part_number);
 
     // Make sure we're valid!
     let part = match part {
@@ -208,21 +200,21 @@ pub fn create(config: &config::Config) {
     };
 
     // Then an ajustment value
-    let adj = prompt.ask_text_entry("Enter adjustment value: ");
+    let adj = app.prompt.ask_text_entry("Enter adjustment value: ");
     let adj: i32 = adj.trim().parse().expect("Invalid adjustment!");
 
     // Unit price
-    let price = prompt.ask_text_entry("Enter unit price: ");
+    let price = app.prompt.ask_text_entry("Enter unit price: ");
     let price: f32 = price.trim().parse().expect("Invalid price!");
 
     // Then any notes.
-    let notes = prompt.ask_text_entry("Enter notes: ");
+    let notes = app.prompt.ask_text_entry("Enter notes: ");
 
     println!("Part number: {}", part.pn);
     println!("Ajustment: {}", adj);
     println!("Price: ${}", price);
     println!("Notes: {}", notes);
-    let proceed = prompt.ask_yes_no_question("Look ok?");
+    let proceed = app.prompt.ask_yes_no_question("Look ok?");
 
     // Confirm change (y/n)
     if proceed {
@@ -236,19 +228,18 @@ pub fn create(config: &config::Config) {
             notes: Some(&notes),
         };
 
-        create_inventory(&conn, &entry).expect("Unable to create inventory item.");
+        create_inventory(&app.conn, &entry).expect("Unable to create inventory item.");
     }
 }
 
-pub fn show(config: &config::Config, show_all_entries: bool) {
+pub fn show(app: &mut crate::Application, show_all_entries: bool) {
     use crate::schema::inventories::dsl::*;
 
     // Create the table
     let mut table = Table::new();
 
-    let connection = establish_connection(&config);
     let results = inventories
-        .load::<Inventory>(&connection)
+        .load::<Inventory>(&app.conn)
         .expect("Error loading parts");
 
     table.add_row(row![
@@ -267,7 +258,7 @@ pub fn show(config: &config::Config, show_all_entries: bool) {
         }
 
         // Check if part number exists
-        let part = find_part_by_id(&connection, &inventory.part_id).expect("Unable to get part.");
+        let part = find_part_by_id(&app.conn, &inventory.part_id).expect("Unable to get part.");
 
         table.add_row(row![
             part.pn,
@@ -291,14 +282,14 @@ pub fn show(config: &config::Config, show_all_entries: bool) {
 
 // TODO: show shortage by build ID
 // Defualt hide non-short items. Option to view all.
-pub fn show_shortage(config: &config::Config, show_all_entries: bool) {
+pub fn show_shortage(app: &mut crate::Application, show_all_entries: bool) {
     // Create the table
     let mut table = Table::new();
 
     // Print out the shortages in table format.
     table.add_row(row!["PID", "PN", "MPN", "Desc", "Have", "Needed", "Short",]);
 
-    let shortages = get_shortages(config, show_all_entries);
+    let shortages = get_shortages(app, show_all_entries);
 
     let shortages = match shortages {
         Ok(x) => x,
@@ -312,7 +303,7 @@ pub fn show_shortage(config: &config::Config, show_all_entries: bool) {
         table.add_row(row![
             entry.pid,
             entry.pn,
-            entry.mpn,
+            format!("\"{}\"", entry.mpn),
             entry.desc,
             entry.have,
             entry.needed,
@@ -324,15 +315,12 @@ pub fn show_shortage(config: &config::Config, show_all_entries: bool) {
 }
 
 // Export inventory to csv
-pub fn export_to_file(config: &config::Config, filename: &String, export_all: bool) {
-    // Establish connection!
-    let conn = establish_connection(&config);
-
+pub fn export_to_file(app: &mut crate::Application, filename: &String, export_all: bool) {
     use crate::schema::*;
 
     // Run the query
     let inventory = inventories::dsl::inventories
-        .load::<Inventory>(&conn)
+        .load::<Inventory>(&app.conn)
         .expect("Uanble to load inventory list.");
 
     // File operations
@@ -350,7 +338,7 @@ pub fn export_to_file(config: &config::Config, filename: &String, export_all: bo
         }
 
         // Grabs the part information
-        let part = find_part_by_id(&conn, &entry.part_id).unwrap();
+        let part = find_part_by_id(&app.conn, &entry.part_id).unwrap();
 
         // Create a new entry
         let inventory_entry = InventoryEntry {
@@ -373,8 +361,8 @@ pub fn export_to_file(config: &config::Config, filename: &String, export_all: bo
 }
 
 // Export shortages to csv
-pub fn export_shortages_to_file(config: &config::Config, filename: &String) {
-    let shortages = get_shortages(config, false).expect("Unable to get shortage report.");
+pub fn export_shortages_to_file(app: &mut crate::Application, filename: &String) {
+    let shortages = get_shortages(app, false).expect("Unable to get shortage report.");
 
     let file = File::create(filename).unwrap();
     let file = BufWriter::new(file);
@@ -392,15 +380,14 @@ pub fn export_shortages_to_file(config: &config::Config, filename: &String) {
 }
 
 pub fn get_shortages(
-    config: &config::Config,
+    app: &mut crate::Application,
     show_all_entries: bool,
 ) -> std::result::Result<Vec<Shortage>, diesel::result::Error> {
     use crate::schema::*;
 
-    let connection = establish_connection(&config);
     let results = builds::dsl::builds
         .filter(builds::dsl::complete.eq(0)) // Only show un-finished builds
-        .load::<Build>(&connection);
+        .load::<Build>(&app.conn);
 
     // Return the error if there was an issue
     let results = match results {
@@ -418,7 +405,7 @@ pub fn get_shortages(
         let bom_list = parts_parts::dsl::parts_parts
             .filter(parts_parts::dsl::bom_part_id.eq(build.part_id))
             .filter(parts_parts::dsl::bom_ver.eq(build.part_ver))
-            .load::<PartsPart>(&connection);
+            .load::<PartsPart>(&app.conn);
 
         // Return the error if there was an issue
         let bom_list = match bom_list {
@@ -437,8 +424,7 @@ pub fn get_shortages(
             let mut inventory_quantity = 0;
 
             // Get the inventory entries
-            let inventory_entries =
-                find_inventories_by_part_id(&connection, &bom_list_entry.part_id);
+            let inventory_entries = find_inventories_by_part_id(&app.conn, &bom_list_entry.part_id);
 
             // Return the error if there was an issue
             let inventory_entries = match inventory_entries {
@@ -475,7 +461,7 @@ pub fn get_shortages(
 
             if !found_in_shortage_list {
                 // Get the part for more info
-                let part = find_part_by_id(&connection, &bom_list_entry.part_id);
+                let part = find_part_by_id(&app.conn, &bom_list_entry.part_id);
 
                 let part = match part {
                     Ok(x) => x,
