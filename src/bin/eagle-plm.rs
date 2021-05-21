@@ -111,6 +111,7 @@ enum BuildSubCommand {
     Delete(DeleteBuild),
     Show(ShowBuilds),
     Complete(CompleteBuild),
+    Export(ExportBuild),
 }
 
 /// Create build manually
@@ -135,6 +136,13 @@ struct ShowBuilds {
 /// Complete a build by id
 #[derive(Clap)]
 struct CompleteBuild {
+    /// ID for the build. Get an id from builds show
+    build_id: i32,
+}
+
+/// Export a build by id
+#[derive(Clap)]
+struct ExportBuild {
     /// ID for the build. Get an id from builds show
     build_id: i32,
 }
@@ -306,6 +314,9 @@ fn main() {
             BuildSubCommand::Complete(a) => {
                 builds::complete(&mut app, a.build_id);
             }
+            BuildSubCommand::Export(a) => {
+                builds::export(&mut app, a.build_id);
+            }
         },
         SubCommand::Inventory(s) => match s.subcmd {
             InventorySubCommand::Create(_) => {
@@ -363,6 +374,7 @@ fn main() {
                 bom::show(&mut app, &a.part_number, &a.version);
             }
         },
-        _ => {}
+
+        SubCommand::Install(_) => {}
     }
 }

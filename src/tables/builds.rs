@@ -1,5 +1,6 @@
 extern crate diesel;
 
+use chrono::Utc;
 use prettytable::Table;
 
 use self::diesel::prelude::*;
@@ -8,7 +9,12 @@ use crate::{models::*, *};
 // Borrowing shortage generation from inventory
 use super::inventory;
 
-use std::io;
+use serde::{Deserialize, Serialize};
+
+use std::{
+    fs::File,
+    io::{self, BufWriter},
+};
 
 pub fn create(app: &mut crate::Application) {
     // Get the input from stdin
@@ -252,4 +258,82 @@ pub fn complete(app: &mut crate::Application, build_id: i32) {
         // Push this inventory item
         create_inventory(&app.conn, &new_inventory).expect("Unable to create inventory.");
     }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct BuildExport {
+    pn: String,
+    mpn: String,
+    desc: String,
+    quantity_in_stock: i32,
+    quantity_needed: i32,
+    checked: Option<bool>,
+}
+
+/// Function used to export BOM to CSV
+pub fn export(app: &mut crate::Application, build_id: i32) {
+    use crate::schema::*;
+
+    // Get the build
+    let build = find_build_by_id(&app.conn, &build_id).expect("Unable to find build!");
+
+    // Get build part number
+    let build_pn = find_part_by_id(&app.conn, &build.part_id).expect("Unable to get part by id");
+
+    // Get partslist
+    let bom_list = parts_parts::dsl::parts_parts
+        .filter(parts_parts::dsl::bom_part_id.eq(build.part_id))
+        .filter(parts_parts::dsl::bom_ver.eq(build.part_ver))
+        .load::<PartsPart>(&app.conn)
+        .expect("Error loading parts");
+
+    // Create filename
+    let filename = format!(
+        "{}-v{}-BUILD:{}-{}.csv",
+        build_pn.pn,
+        build.part_ver,
+        build.id,
+        Utc::now().timestamp()
+    );
+
+    // File operations
+    let file = File::create(&filename).unwrap();
+    let file = BufWriter::new(file);
+
+    // Create CSV writer
+    let mut wtr = csv::Writer::from_writer(file);
+
+    // Iterate though every bom list entry
+    // Do the math to modify the inventory
+    for bom_list_entry in &bom_list {
+        // Skip if nostuff is set
+        if bom_list_entry.nostuff == 1 {
+            println!("{} is no stuff.", bom_list_entry.refdes);
+            continue;
+        }
+
+        // Get part
+        let part =
+            find_part_by_id(&app.conn, &bom_list_entry.part_id).expect("Unable to get part by id");
+
+        // Inventory entries
+        let inventory_entries = find_inventories_by_part_id(&app.conn, &bom_list_entry.part_id)
+            .expect("Unable to query for inventory");
+
+        let quantity_available: i32 = inventory_entries.iter().map(|x| x.quantity).sum();
+
+        let line = BuildExport {
+            pn: part.pn,
+            mpn: part.mpn,
+            desc: part.descr,
+            quantity_in_stock: quantity_available,
+            quantity_needed: bom_list_entry.quantity * build.quantity,
+            checked: None,
+        };
+
+        wtr.serialize(line).expect("Unable to serialize.");
+        wtr.flush().expect("Unable to flush");
+    }
+
+    println!("Build exported to {}", filename);
 }
