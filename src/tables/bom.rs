@@ -17,7 +17,7 @@ use std::{
     io::{StdinLock, Stdout},
 };
 
-#[derive(Eq, PartialEq)]
+#[derive(Eq, PartialEq, Debug)]
 struct LineItem {
     name: String,
     pn: String,
@@ -44,6 +44,7 @@ struct BomEntry {
     descr: String,
     ver: i32,
     inventory_qty: i32,
+    no_stuff: i32,
 }
 
 /// Helper function that prints a list of SimpleParts
@@ -206,26 +207,27 @@ fn get_line_items_from_parts(
         }
 
         // Technology is optional. So need to do a match here.
-        let technology = match &part.technology {
-            Some(x) => x,
-            None => "",
-        };
-
-        // Concatinate all the elements to form the actual part number
-        let part_number = format!(
-            "{}{}{}",
-            part.deviceset,
-            technology.to_string(),
-            part.device,
-        );
+        let mut technology = part.technology.clone().unwrap_or_default();
 
         // Check if it's no stuff. If so skip over adding it.
         let mut nostuff = 0;
         for var in &part.variants {
-            if &var.name == &variant.name && var.populate == "no".to_string() {
-                nostuff = 1;
+            if var.name == variant.name {
+                // Only update the technology if it exists!
+                technology = match &var.technology {
+                    Some(t) => t.to_string(),
+                    None => technology,
+                };
+
+                // Set no stuff
+                if var.populate == Some("no".to_string()) {
+                    nostuff = 1;
+                }
             }
         }
+
+        // Concatinate all the elements to form the actual part number
+        let part_number = format!("{}{}{}", part.deviceset, technology, part.device,);
 
         // Create temp line item
         let item = LineItem {
@@ -272,15 +274,12 @@ fn prompt_to_update_part(
     existing: &models::Part,
 ) -> bool {
     // Check for changes and ask if want to update.
-    if new.mpn != existing.mpn
-        || new.descr != existing.descr
-        || *new.ver != existing.ver
-        || *new.mqty != existing.mqty
-    {
+    if new.mpn != existing.mpn || new.descr != existing.descr || *new.ver != existing.ver {
         let question = format!("{} found! Would you like to update it?", existing.pn);
 
         // Create the table
         let mut table = Table::new();
+        table.add_row(row!["", "pn", "mpn", "decr", "mqty", "ver"]);
         table.add_row(row![
             "Current:",
             existing.pn,
@@ -497,13 +496,9 @@ pub fn import(app: &mut crate::Application, filename: &String) {
 
         match (line_item, bom_item) {
             (Ok(li), Ok(bi)) => {
-                // Calcualte the qty using item qty and mqty
-                let quantity = item.quantity * li.mqty;
-
                 // Create the new relationship
-                // ? Better way to do this?
                 let relationship = models::NewPartsParts {
-                    quantity: &quantity,
+                    quantity: &item.quantity,
                     bom_ver: &bi.ver,
                     refdes: &item.name,
                     nostuff: &item.nostuff,
@@ -548,11 +543,14 @@ pub fn show(app: &mut crate::Application, part_number: &String, version: &Option
     };
 
     // Get all the parts related to this BOM
-    let results = parts_parts::dsl::parts_parts
+    let mut results = parts_parts::dsl::parts_parts
         .filter(parts_parts::dsl::bom_part_id.eq(part.id))
         .filter(parts_parts::dsl::bom_ver.eq(ver))
         .load::<models::PartsPart>(&app.conn)
         .expect("Error loading parts");
+
+    // Sort the results by refdes
+    results.sort_by(|a, b| a.refdes.cmp(&b.refdes));
 
     println!("Displaying {} parts", results.len());
 
@@ -624,14 +622,21 @@ pub fn export(app: &mut crate::Application, part_number: &str, version: &Option<
     };
 
     // Get all the parts related to this BOM
-    let results = parts_parts::dsl::parts_parts
+    let mut results = parts_parts::dsl::parts_parts
         .filter(parts_parts::dsl::bom_part_id.eq(part.id))
         .filter(parts_parts::dsl::bom_ver.eq(ver))
         .load::<models::PartsPart>(&app.conn)
         .expect("Error loading parts");
 
+    // Sort the results by refdes
+    results.sort_by(|a, b| {
+        let first = a.refdes.chars().nth(0).unwrap();
+        let second = b.refdes.chars().nth(0).unwrap();
+        first.cmp(&second)
+    });
+
     // Create filename
-    let filename = format!("{}-v{}-{}.csv", part_number, ver, Utc::now().timestamp());
+    let filename = format!("{}-v{}-{}.csv", part_number, ver, Utc::now().to_rfc3339());
 
     // File operations
     let file = File::create(&filename).unwrap();
@@ -666,6 +671,7 @@ pub fn export(app: &mut crate::Application, part_number: &str, version: &Option<
             descr: details.descr,
             ver: details.ver,
             inventory_qty,
+            no_stuff: entry.nostuff,
         };
 
         wtr.serialize(line).expect("Unable to serialize.");

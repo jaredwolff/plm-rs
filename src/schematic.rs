@@ -105,8 +105,8 @@ pub struct Part {
 
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct Variant {
-    #[serde(default)]
     pub name: String,
-    #[serde(default)]
-    pub populate: String,
+    pub populate: Option<String>,
+    pub value: Option<String>,
+    pub technology: Option<String>,
 }

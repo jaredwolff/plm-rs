@@ -289,11 +289,11 @@ pub fn export(app: &mut crate::Application, build_id: i32) {
 
     // Create filename
     let filename = format!(
-        "{}-v{}-BUILD:{}-{}.csv",
+        "{}-v{}-BUILD={}-{}.csv",
         build_pn.pn,
         build.part_ver,
         build.id,
-        Utc::now().timestamp()
+        Utc::now().to_rfc3339()
     );
 
     // File operations
