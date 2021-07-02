@@ -125,7 +125,7 @@ pub fn complete(app: &mut crate::Application, build_id: i32) {
     for entry in shortages {
         if entry.short != 0 {
             println!("Still short {} for part: {}", entry.needed, entry.pn,);
-            if still_short == false {
+            if !still_short {
                 still_short = true;
             }
         }
@@ -183,7 +183,7 @@ pub fn complete(app: &mut crate::Application, build_id: i32) {
                 } else {
                     new_qty = 0;
                     used = entry.quantity;
-                    quantity = quantity - entry.quantity;
+                    quantity -= entry.quantity
                 }
 
                 // Get string from entry.notes

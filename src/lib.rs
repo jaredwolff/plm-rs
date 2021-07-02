@@ -36,7 +36,7 @@ pub struct Application<'a> {
 // Migrate
 embed_migrations!();
 
-pub fn establish_connection(db_name: &String) -> SqliteConnection {
+pub fn establish_connection(db_name: &str) -> SqliteConnection {
     // Get text version of configpath
     let mut database_url =
         config::get_default_config_path().unwrap_or_else(|_| panic!("Unable to get config path."));
@@ -78,8 +78,8 @@ pub fn update_part(
 
 pub fn rename_part(
     conn: &SqliteConnection,
-    oldpn: &String,
-    newpn: &String,
+    oldpn: &str,
+    newpn: &str,
 ) -> std::result::Result<usize, diesel::result::Error> {
     use schema::parts::dsl::*;
 

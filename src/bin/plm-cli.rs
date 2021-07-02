@@ -1,5 +1,5 @@
 use clap::{crate_version, Clap};
-use eagle_plm::{config, establish_connection, prompt, tables::*, Application};
+use plm_rs::{config, establish_connection, prompt, tables::*, Application};
 use std::io;
 
 #[derive(Clap)]
@@ -243,7 +243,7 @@ fn main() {
             let db_name = "database.db".to_string();
 
             config = config::Config {
-                database_name: db_name.clone(),
+                database_name: db_name,
                 library_name: "your-library".to_string(),
                 attrition_config: config::AttritionConfig {
                     entries: Vec::new(),
@@ -292,8 +292,8 @@ fn main() {
 
     // Settings for application
     let mut app = Application {
-        config_path,
         config,
+        config_path,
         prompt,
         conn,
     };

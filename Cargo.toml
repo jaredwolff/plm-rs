@@ -7,6 +7,10 @@ description = "Rust powered BOM management and material planning for your comman
 license-file = "LICENSE"
 repository = "https://github.com/jaredwolff/plm-rs"
 
+[[bin]]
+name = "plm"
+path = "src/bin/plm-cli.rs"
+
 [dependencies]
 diesel = { version="1.4", features=["sqlite", "chrono"] } # Database
 diesel_migrations = "1.4" # Migration

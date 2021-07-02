@@ -48,7 +48,7 @@ struct BomEntry {
 }
 
 /// Helper function that prints a list of SimpleParts
-fn print_simple_part_list(list: &Vec<SimplePart>) {
+fn print_simple_part_list(list: &[SimplePart]) {
     let mut table = Table::new();
     table.add_row(row![
         "PART NUMBER",
@@ -98,12 +98,12 @@ fn get_simplepart_from_library(
 
     // Quantity local
     // let mut mqty_temp: i32 = 1;
-    let mut part: SimplePart = Default::default();
-
-    // Set PN
-    part.pn = item.pn.clone();
-    part.nostuff = item.nostuff;
-    part.mqty = item.quantity;
+    let mut part = SimplePart {
+        pn: item.pn.clone(),
+        nostuff: item.nostuff,
+        mqty: item.quantity,
+        ..Default::default()
+    };
 
     for library in &eagle.drawing.schematic.libraries.library {
         // Check if it's the library we care about.
@@ -122,7 +122,7 @@ fn get_simplepart_from_library(
                                     // Get the attributes we care about.
                                     for attribute in attributes {
                                         // Blank value check
-                                        if attribute.value == "" {
+                                        if attribute.value.is_empty() {
                                             continue;
                                         }
 
@@ -191,9 +191,9 @@ fn get_simplepart_from_library(
 
 /// Using a list of parts, this function determines the line items for a BOM
 fn get_line_items_from_parts(
-    parts: &Vec<schematic::Part>,
+    parts: &[schematic::Part],
     variant: &VariantDef,
-    ignore_list: &Vec<String>,
+    ignore_list: &[String],
 ) -> Vec<LineItem> {
     let mut list: Vec<LineItem> = Vec::new();
 
@@ -234,25 +234,22 @@ fn get_line_items_from_parts(
             name: part.name.clone(),
             pn: part_number,
             quantity: 1,
-            nostuff: nostuff,
+            nostuff,
         };
 
         // TODO: Check if part has attribute (MQTY). This overrides MQTY from the library.
 
         // Check if list has
         let mut found = false;
-        for entry in list
+        if let Some(entry) = list
             .iter_mut()
-            .filter(|part| part.pn == item.pn && part.nostuff == item.nostuff)
+            .find(|part| part.pn == item.pn && part.nostuff == item.nostuff)
         {
             found = true;
 
             // Increase the quantity
             entry.name = format!("{} {}", entry.name, item.name);
             entry.quantity += 1;
-
-            // Should only process once. All parts with same pn should be gathered together
-            break;
         }
 
         // Only add to the list if it was found and not nostuff
@@ -307,7 +304,7 @@ fn prompt_to_update_part(
 }
 
 /// Function used to import parts from file
-pub fn import(app: &mut crate::Application, filename: &String) {
+pub fn import(app: &mut crate::Application, filename: &str) {
     use crate::schema::parts::dsl::*;
 
     // Open the file
@@ -350,7 +347,7 @@ pub fn import(app: &mut crate::Application, filename: &String) {
     }
 
     // Warning about blank description
-    if bom_desc == "" {
+    if bom_desc.is_empty() {
         println!("Warning: Blank BOM description");
     }
 
@@ -389,7 +386,7 @@ pub fn import(app: &mut crate::Application, filename: &String) {
     // TODO: if no inventory, create 0 inventory
 
     // Skip a line
-    println!("");
+    println!();
 
     // Different actions depending if it exists
     match res {
@@ -453,7 +450,7 @@ pub fn import(app: &mut crate::Application, filename: &String) {
         // Set part attributes from library
         let part = get_simplepart_from_library(&item, &eagle, &app.config.library_name);
 
-        if part.mpn == "" {
+        if part.mpn.is_empty() {
             println!("Manufacturer part number must be set for {}", part.pn);
             std::process::exit(1);
         }
@@ -494,24 +491,21 @@ pub fn import(app: &mut crate::Application, filename: &String) {
         // Create BOM association between the part and the
         // BOM info like QTY, REFDES, NOSTUFF
 
-        match (line_item, bom_item) {
-            (Ok(li), Ok(bi)) => {
-                // Create the new relationship
-                let relationship = models::NewPartsParts {
-                    quantity: &item.quantity,
-                    bom_ver: &bi.ver,
-                    refdes: &item.name,
-                    nostuff: &item.nostuff,
-                    bom_part_id: &bi.id,
-                    part_id: &li.id,
-                };
+        if let (Ok(li), Ok(bi)) = (line_item, bom_item) {
+            // Create the new relationship
+            let relationship = models::NewPartsParts {
+                quantity: &item.quantity,
+                bom_ver: &bi.ver,
+                refdes: &item.name,
+                nostuff: &item.nostuff,
+                bom_part_id: &bi.id,
+                part_id: &li.id,
+            };
 
-                // Push them to the DB
-                create_bom_line_item(&app.conn, &relationship)
-                    .expect("Unable to add new BOM line item.");
-            }
-            _ => (),
-        };
+            // Push them to the DB
+            create_bom_line_item(&app.conn, &relationship)
+                .expect("Unable to add new BOM line item.");
+        }
     }
 
     // Print out in simple part list format
@@ -519,7 +513,7 @@ pub fn import(app: &mut crate::Application, filename: &String) {
 }
 
 /// Function used to show parts in BOM
-pub fn show(app: &mut crate::Application, part_number: &String, version: &Option<i32>) {
+pub fn show(app: &mut crate::Application, part_number: &str, version: &Option<i32>) {
     use crate::schema::*;
 
     // Find the part
@@ -630,8 +624,8 @@ pub fn export(app: &mut crate::Application, part_number: &str, version: &Option<
 
     // Sort the results by refdes
     results.sort_by(|a, b| {
-        let first = a.refdes.chars().nth(0).unwrap();
-        let second = b.refdes.chars().nth(0).unwrap();
+        let first = a.refdes.chars().next().unwrap();
+        let second = b.refdes.chars().next().unwrap();
         first.cmp(&second)
     });
 
@@ -681,7 +675,7 @@ pub fn export(app: &mut crate::Application, part_number: &str, version: &Option<
     println!("Inventory list exported to {}", filename);
 }
 
-// pub fn delete(part_number: &String, version: &i32) {
+// pub fn delete(part_number: &str, version: &i32) {
 //   // TODO: confirm exists
 //   // TODO: confirm delete
 //   // TODO delete query

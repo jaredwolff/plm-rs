@@ -26,7 +26,7 @@ where
         let response = response.trim();
 
         // Return a copy
-        response.clone().to_string()
+        response.to_string()
     }
 
     pub fn ask_yes_no_question(&mut self, question: &str) -> bool {
@@ -40,11 +40,7 @@ where
         let ch = input.chars().next().unwrap();
 
         // Return result
-        if ch == 'y' {
-            true
-        } else {
-            false
-        }
+        ch == 'y'
     }
 }
 

@@ -1,4 +1,4 @@
-# An Eagle Powered Bom Management for your command line!
+# A Rust Powered Bom Management for your command line!
 ![screenshot](images/screenshot.png)
 
 This project utilizes the built-in capabilities of Eagle to store part data. Use this project to
@@ -130,6 +130,12 @@ cargo run --bin mrp inventory show
 cargo run --bin mrp build show -a
 cargo run --bin mrp build complete -b 1
 ```
+
+## FAQ
+
+* **Q:** I use this with <Insert CAD package name here>?
+
+  **A:** this CLI application only supports Eagle
 
 ## License
 

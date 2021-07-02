@@ -47,7 +47,7 @@ pub struct Shortage {
 }
 
 /// Reads records from file using a generic type. Useful across create and update calls
-fn read_records<T>(filename: &String) -> anyhow::Result<Vec<T>>
+fn read_records<T>(filename: &str) -> anyhow::Result<Vec<T>>
 where
     T: DeserializeOwned + Debug,
 {
@@ -76,7 +76,7 @@ where
 }
 
 // Update from inventory export file
-pub fn update_from_file(app: &mut crate::Application, filename: &String) {
+pub fn update_from_file(app: &mut crate::Application, filename: &str) {
     // Get records from file
     let records: Vec<InventoryEntry> = match read_records(filename) {
         Ok(r) => r,
@@ -89,17 +89,14 @@ pub fn update_from_file(app: &mut crate::Application, filename: &String) {
     // Only updates records found!
     for record in &records {
         // Notes converted as necessary
-        let notes = match &record.notes {
-            Some(n) => Some(n.as_str()),
-            None => None,
-        };
+        let notes = record.notes.as_deref();
 
         // Convert from InventoryRecord to NewUpdateInventoryEntry
         let update = NewUpdateInventoryEntry {
             quantity: &record.quantity,
             consumed: &record.consumed,
             unit_price: record.unit_price.as_ref(),
-            notes: notes,
+            notes,
             part_ver: &record.part_ver,
             part_id: &record.part_id,
         };
@@ -113,7 +110,7 @@ pub fn update_from_file(app: &mut crate::Application, filename: &String) {
     }
 }
 
-pub fn create_from_file(app: &mut crate::Application, filename: &String) {
+pub fn create_from_file(app: &mut crate::Application, filename: &str) {
     println!("{:?}", app.config);
     println!("{:?}", filename);
 
@@ -157,10 +154,7 @@ pub fn create_from_file(app: &mut crate::Application, filename: &String) {
         };
 
         // Get the notes
-        let notes = match &record.notes {
-            Some(n) => Some(n.as_str()),
-            None => None,
-        };
+        let notes = record.notes.as_deref();
 
         // Check if part number exists
         let part = find_part_by_mpn(&app.conn, &record.mpn).expect("Unable to get part.");
@@ -172,7 +166,7 @@ pub fn create_from_file(app: &mut crate::Application, filename: &String) {
             unit_price: record.unit_price.as_ref(),
             quantity: &quantity,
             consumed: &0,
-            notes: notes,
+            notes,
         };
 
         // Finally create the inventory if all look ok!
@@ -266,7 +260,7 @@ pub fn show(app: &mut crate::Application, show_all_entries: bool) {
             inventory.quantity,
             inventory.consumed,
             inventory.unit_price.unwrap_or(0.0),
-            inventory.notes.unwrap_or("".to_string()),
+            inventory.notes.unwrap_or_else(|| "".to_string()),
             inventory.part_ver
         ]);
     }
@@ -315,7 +309,7 @@ pub fn show_shortage(app: &mut crate::Application, show_all_entries: bool) {
 }
 
 // Export inventory to csv
-pub fn export_to_file(app: &mut crate::Application, filename: &String, export_all: bool) {
+pub fn export_to_file(app: &mut crate::Application, filename: &str, export_all: bool) {
     use crate::schema::*;
 
     // Run the query
@@ -361,7 +355,7 @@ pub fn export_to_file(app: &mut crate::Application, filename: &String, export_al
 }
 
 // Export shortages to csv
-pub fn export_shortages_to_file(app: &mut crate::Application, filename: &String) {
+pub fn export_shortages_to_file(app: &mut crate::Application, filename: &str) {
     let shortages = get_shortages(app, false).expect("Unable to get shortage report.");
 
     let file = File::create(filename).unwrap();
@@ -484,7 +478,7 @@ pub fn get_shortages(
                     desc: part.descr,
                     have: inventory_quantity,
                     needed: build.quantity * bom_list_entry.quantity,
-                    short: short,
+                    short,
                     unit_price: None,
                     notes: None,
                     quantity: None,

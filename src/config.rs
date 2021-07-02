@@ -1,6 +1,6 @@
 use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 #[derive(Debug, Serialize, Deserialize)]
 pub enum AttritionType {
     Each,
@@ -35,7 +35,7 @@ pub struct Config {
 }
 
 /// Set config
-pub fn save_config(config: &Config, config_path: &PathBuf) -> anyhow::Result<()> {
+pub fn save_config(config: &Config, config_path: &Path) -> anyhow::Result<()> {
     // With init data create config.toml
     let config_string = toml::to_string(config).unwrap();
 
@@ -46,7 +46,7 @@ pub fn save_config(config: &Config, config_path: &PathBuf) -> anyhow::Result<()>
 }
 
 /// Fetch the configuration from the provided folder path
-pub fn load_config(config_path: &PathBuf) -> anyhow::Result<Config> {
+pub fn load_config(config_path: &Path) -> anyhow::Result<Config> {
     // Read file to end
     let config = std::fs::read_to_string(&config_path)?;
 

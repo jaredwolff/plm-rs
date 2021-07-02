@@ -36,13 +36,13 @@ pub fn create(app: &mut crate::Application) {
     let found = find_part_by_pn(&app.conn, &pn);
 
     // If already found ask if it should be updated
-    if found.is_ok() {
+    if let Ok(found) = found {
         let question = format!("{} already exists! Would you like to update it?", pn);
         let update = app.prompt.ask_yes_no_question(&question);
 
         // Update if they said yes.
         if update {
-            update_part(&app.conn, &found.unwrap().id, &part).expect("Unable to update part!");
+            update_part(&app.conn, &found.id, &part).expect("Unable to update part!");
 
             // Check for success
             println!("{} updated!", pn);
@@ -60,7 +60,7 @@ pub fn rename(app: &mut crate::Application) {
     rename_part(&app.conn, &pn, &newpn).expect("Unable to change pn");
 }
 
-pub fn create_by_csv(app: &mut crate::Application, filename: &String) {
+pub fn create_by_csv(app: &mut crate::Application, filename: &str) {
     // Open the file
     let file = File::open(filename).unwrap();
     let file = BufReader::new(file);
@@ -93,9 +93,7 @@ pub fn create_by_csv(app: &mut crate::Application, filename: &String) {
         let found = find_part_by_pn(&app.conn, &part.pn);
 
         // If already found ask if it should be updated
-        if found.is_ok() {
-            let found = found.unwrap();
-
+        if let Ok(found) = found {
             // Compare the two make sure they're different
             if found.mpn != part.mpn || found.descr != part.descr || found.ver != *part.ver {
                 let question = format!("{} already exists! Would you like to update it?", part.pn);
