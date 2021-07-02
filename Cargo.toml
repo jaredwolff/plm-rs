@@ -1,17 +1,20 @@
 [package]
-name = "eagle-plm"
+name = "plm-rs"
 version = "0.1.4"
 authors = ["Jared Wolff <hello@jaredwolff.com>"]
 edition = "2018"
+description = "Rust powered BOM management and material planning for your command line."
+license-file = "LICENSE"
+repository = "https://github.com/jaredwolff/plm-rs"
 
 [dependencies]
-diesel = { version = "1.4", features = ["sqlite", "chrono"] } # Database
+diesel = { version="1.4", features=["sqlite", "chrono"] } # Database
 diesel_migrations = "1.4" # Migration
 csv = "1" # Reading and writing to CSV
 chrono = "0.4" # Time management
 prettytable-rs = "0.8" # Displaying tabels
-quick-xml = { version = "0.22", features = ["serialize"] } # Parsing XML
-serde = { version = "1.0", features = ["derive"] } # Serde
+quick-xml = { version="0.22", features=["serialize"] } # Parsing XML
+serde = { version="1.0", features=["derive"] } # Serde
 clap = "~3.0.0-beta.2" # Handling cli commands
 anyhow = "1.0" # For handling errors
 home = "0.5" # Getting home folder location

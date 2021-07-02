@@ -4,3 +4,4 @@ Cargo.lock
 *.db
 .env
 *.csv
+config.toml
